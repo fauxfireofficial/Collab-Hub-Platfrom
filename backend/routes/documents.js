@@ -71,7 +71,7 @@ router.post('/upload', auth, upload.single('document'), async (req, res) => {
 });
 
 // @route   GET /api/documents/download/:filename
-// @desc    Download a file with its original filename
+// @desc    Download a file with its original filename (or a custom query filename)
 router.get('/download/:filename', (req, res) => {
   try {
     const filename = req.params.filename;
@@ -81,11 +81,14 @@ router.get('/download/:filename', (req, res) => {
       return res.status(404).json({ message: 'File not found' });
     }
 
-    // Extract original filename (storedName is uniqueSuffix + '-' + originalName)
-    const match = filename.match(/^\d+-\d+-(.+)$/);
-    const originalName = match ? match[1] : filename;
+    // Use custom name from query parameter if provided, otherwise extract original name
+    let downloadName = req.query.name;
+    if (!downloadName) {
+      const match = filename.match(/^\d+-\d+-(.+)$/);
+      downloadName = match ? match[1] : filename;
+    }
 
-    res.download(filePath, originalName);
+    res.download(filePath, downloadName);
   } catch (error) {
     console.error('Download error:', error);
     res.status(500).json({ message: 'Server error downloading file' });

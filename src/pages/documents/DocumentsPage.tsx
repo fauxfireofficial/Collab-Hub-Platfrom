@@ -41,7 +41,11 @@ export const DocumentsPage: React.FC = () => {
   const downloadFile = (url: string, fileName: string) => {
     try {
       // Replace static '/uploads/' path with download endpoint '/api/documents/download/'
-      const downloadUrl = url.replace('/uploads/', '/api/documents/download/');
+      let downloadUrl = url.replace('/uploads/', '/api/documents/download/');
+      
+      if (fileName) {
+        downloadUrl += `?name=${encodeURIComponent(fileName)}`;
+      }
       
       // Navigate to download URL; since it returns Content-Disposition: attachment,
       // the browser will download it without navigating away from the page.
