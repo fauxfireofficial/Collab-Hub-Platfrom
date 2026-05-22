@@ -70,6 +70,29 @@ router.post('/upload', auth, upload.single('document'), async (req, res) => {
   }
 });
 
+// @route   GET /api/documents/download/:filename
+// @desc    Download a file with its original filename
+router.get('/download/:filename', (req, res) => {
+  try {
+    const filename = req.params.filename;
+    const filePath = path.join('./uploads', filename);
+
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ message: 'File not found' });
+    }
+
+    // Extract original filename (storedName is uniqueSuffix + '-' + originalName)
+    const match = filename.match(/^\d+-\d+-(.+)$/);
+    const originalName = match ? match[1] : filename;
+
+    res.download(filePath, originalName);
+  } catch (error) {
+    console.error('Download error:', error);
+    res.status(500).json({ message: 'Server error downloading file' });
+  }
+});
+
+
 // @route   GET /api/documents
 // @desc    Get all documents for the current user (owned or shared)
 router.get('/', auth, async (req, res) => {

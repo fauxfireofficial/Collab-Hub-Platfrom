@@ -63,21 +63,17 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
   const [showLightbox, setShowLightbox] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Download file locally by fetching it as a blob to force direct browser save
-  const downloadFile = async (url: string, fileName: string) => {
+  // Download file locally using the backend download endpoint to preserve original filename
+  const downloadFile = (url: string, fileName: string) => {
     try {
-      const response = await fetch(url);
-      const blob = await response.blob();
-      const blobUrl = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = blobUrl;
-      link.download = fileName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(blobUrl);
+      // Replace static '/uploads/' path with download endpoint '/api/documents/download/'
+      const downloadUrl = url.replace('/uploads/', '/api/documents/download/');
+      
+      // Navigate to download URL; since it returns Content-Disposition: attachment,
+      // the browser will download it without navigating away from the page.
+      window.location.href = downloadUrl;
     } catch (error) {
-      console.error('Direct download failed, falling back to open in new tab:', error);
+      console.error('Download failed, falling back to open in new tab:', error);
       window.open(url, '_blank');
     }
   };
