@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Send, Phone, Video, Info, ArrowLeft, Paperclip, FileSpreadsheet, Scale, Image as ImageIcon, FileText } from 'lucide-react';
+import { Send, Phone, Video, Info, ArrowLeft, Paperclip, FileSpreadsheet, Scale, Image as ImageIcon, FileText, X, Loader2 } from 'lucide-react';
 import { Avatar } from '../../components/ui/Avatar';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -27,6 +27,24 @@ export const ChatPage: React.FC = () => {
   const attachmentMenuRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Media Preview Modal States
+  const [previewFile, setPreviewFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string>('');
+  const [previewIsVideo, setPreviewIsVideo] = useState(false);
+  const [captionText, setCaptionText] = useState('');
+  const [isSendingMedia, setIsSendingMedia] = useState(false);
+
+  // Clean up object URL on modal close
+  const closePreviewModal = () => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPreviewFile(null);
+    setPreviewUrl('');
+    setPreviewIsVideo(false);
+    setCaptionText('');
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    setActiveUploadType(null);
+  };
+
   // Click outside to close attachment menu
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -37,6 +55,15 @@ export const ChatPage: React.FC = () => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Close preview modal on Escape
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && previewFile) closePreviewModal();
+    };
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [previewFile]);
 
   const triggerFileInput = (type: 'pdf' | 'excel' | 'legal' | 'image') => {
     setActiveUploadType(type);
@@ -60,25 +87,46 @@ export const ChatPage: React.FC = () => {
     const file = e.target.files?.[0];
     if (!file || !activeUploadType || !currentUser || !userId) return;
 
+    // For image/video: show preview modal instead of uploading immediately
+    if (activeUploadType === 'image') {
+      const isVideo = file.type.startsWith('video/');
+      const objectUrl = URL.createObjectURL(file);
+      setPreviewFile(file);
+      setPreviewUrl(objectUrl);
+      setPreviewIsVideo(isVideo);
+      setCaptionText('');
+      return; // Don't upload yet — wait for user to confirm via modal
+    }
+
+    // For documents: upload immediately as before
+    await uploadAndSend(file, activeUploadType, '');
+  };
+
+  const uploadAndSend = async (file: File, uploadType: 'pdf' | 'excel' | 'legal' | 'image', caption: string) => {
     try {
       const formData = new FormData();
       formData.append('document', file);
       
       const uploadRes = await api.post('/documents/upload', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
+        headers: { 'Content-Type': 'multipart/form-data' }
       });
       
       const docData = uploadRes.data;
+
+      // Determine actual file type (could be video even if uploadType is 'image')
+      const actualFileType = file.type.startsWith('video/') ? 'video' : uploadType;
       
-      const attachmentPayload = {
+      const attachmentPayload: any = {
         attachment: true,
-        fileType: activeUploadType,
+        fileType: actualFileType,
         fileName: docData.name,
         fileUrl: docData.url,
         fileSize: docData.size
       };
+
+      if (caption.trim()) {
+        attachmentPayload.caption = caption.trim();
+      }
       
       const sendRes = await api.post('/chat/send', {
         receiverId: userId,
@@ -100,11 +148,17 @@ export const ChatPage: React.FC = () => {
     } catch (err) {
       console.error('Error uploading and sending attachment:', err);
     } finally {
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
+      if (fileInputRef.current) fileInputRef.current.value = '';
       setActiveUploadType(null);
     }
+  };
+
+  const handleSendMedia = async () => {
+    if (!previewFile || !activeUploadType) return;
+    setIsSendingMedia(true);
+    await uploadAndSend(previewFile, activeUploadType, captionText);
+    setIsSendingMedia(false);
+    closePreviewModal();
   };
   
   // Load active conversations list
@@ -220,212 +274,318 @@ export const ChatPage: React.FC = () => {
   if (!currentUser) return null;
   
   return (
-    <div className="flex h-[calc(100vh-4rem)] bg-white border border-gray-200 rounded-lg overflow-hidden animate-fade-in">
-      {/* Conversations sidebar */}
-      <div className={`w-full md:w-1/3 lg:w-1/4 border-r border-gray-200 ${userId ? 'hidden md:block' : 'block'}`}>
-        <ChatUserList conversations={conversations} />
-      </div>
-      
-      {/* Main chat area */}
-      <div className={`flex-1 flex flex-col ${!userId ? 'hidden md:flex' : 'flex'}`}>
-        {/* Chat header */}
-        {chatPartner ? (
-          <>
-            <div className="border-b border-gray-200 p-4 flex justify-between items-center bg-white shadow-sm">
-              <div className="flex items-center">
-                <button 
-                  onClick={() => navigate('/chat')}
-                  className="mr-3 p-1 rounded-full hover:bg-gray-100 md:hidden"
-                  aria-label="Back to messages"
-                >
-                  <ArrowLeft size={20} className="text-gray-600" />
-                </button>
-                <Avatar
-                  src={chatPartner.avatarUrl}
-                  alt={chatPartner.name}
-                  size="md"
-                  status={chatPartner.isOnline ? 'online' : 'offline'}
-                  className="mr-3"
+    <>
+      {/* ───────────────────────────────────────────────── */}
+      {/* WhatsApp-like Media Preview Modal                */}
+      {/* ───────────────────────────────────────────────── */}
+      {previewFile && previewUrl && (
+        <div
+          className="fixed inset-0 z-[9999] flex flex-col"
+          style={{ background: 'rgba(0,0,0,0.97)' }}
+        >
+          {/* Modal Header */}
+          <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
+            <div className="flex items-center space-x-3">
+              <div className="w-9 h-9 rounded-full flex items-center justify-center"
+                style={{ background: previewIsVideo ? 'rgba(139,92,246,0.25)' : 'rgba(99,179,237,0.2)' }}>
+                {previewIsVideo
+                  ? <Video size={18} className="text-purple-400" />
+                  : <ImageIcon size={18} className="text-blue-400" />
+                }
+              </div>
+              <div>
+                <p className="text-white text-sm font-semibold leading-tight truncate max-w-[200px]">
+                  {previewFile.name}
+                </p>
+                <p className="text-gray-400 text-xs">
+                  {previewIsVideo ? 'Video' : 'Image'} • {(previewFile.size / 1024 / 1024).toFixed(2)} MB
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={closePreviewModal}
+              disabled={isSendingMedia}
+              className="p-2 rounded-full text-gray-400 hover:text-white hover:bg-white/10 transition-colors focus:outline-none"
+              aria-label="Close preview"
+            >
+              <X size={20} />
+            </button>
+          </div>
+
+          {/* Media Preview Area */}
+          <div className="flex-1 flex items-center justify-center p-6 overflow-hidden">
+            {previewIsVideo ? (
+              <video
+                src={previewUrl}
+                controls
+                className="max-w-full max-h-full rounded-xl shadow-2xl"
+                style={{ maxHeight: 'calc(100vh - 220px)' }}
+              />
+            ) : (
+              <img
+                src={previewUrl}
+                alt="Preview"
+                className="max-w-full max-h-full object-contain rounded-xl shadow-2xl select-none"
+                style={{ maxHeight: 'calc(100vh - 220px)' }}
+              />
+            )}
+          </div>
+
+          {/* Caption Input + Send Button */}
+          <div
+            className="px-4 py-4 border-t border-white/10"
+            style={{ background: 'rgba(15,15,20,0.95)' }}
+          >
+            <div className="max-w-2xl mx-auto flex items-center space-x-3">
+              <div className="flex-1 relative">
+                <input
+                  type="text"
+                  value={captionText}
+                  onChange={(e) => setCaptionText(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey && !isSendingMedia) {
+                      e.preventDefault();
+                      handleSendMedia();
+                    }
+                  }}
+                  placeholder="Add a caption..."
+                  disabled={isSendingMedia}
+                  className="w-full bg-white/10 border border-white/20 rounded-full px-5 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/60 focus:border-purple-500/60 transition-all disabled:opacity-50"
+                  autoFocus
                 />
+              </div>
+              <button
+                type="button"
+                onClick={handleSendMedia}
+                disabled={isSendingMedia}
+                className="w-11 h-11 rounded-full flex items-center justify-center shadow-lg transition-all focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed"
+                style={{ background: isSendingMedia ? '#4f46e5' : 'linear-gradient(135deg,#7c3aed,#4f46e5)' }}
+                aria-label="Send media"
+              >
+                {isSendingMedia
+                  ? <Loader2 size={18} className="text-white animate-spin" />
+                  : <Send size={18} className="text-white" />
+                }
+              </button>
+            </div>
+            <p className="text-center text-gray-600 text-xs mt-2">
+              Press Enter to send • Esc to cancel
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* ───────────────────────────────────────────────── */}
+      {/* Main Chat Layout                                 */}
+      {/* ───────────────────────────────────────────────── */}
+      <div className="flex h-[calc(100vh-4rem)] bg-white border border-gray-200 rounded-lg overflow-hidden animate-fade-in">
+        {/* Conversations sidebar */}
+        <div className={`w-full md:w-1/3 lg:w-1/4 border-r border-gray-200 ${userId ? 'hidden md:block' : 'block'}`}>
+          <ChatUserList conversations={conversations} />
+        </div>
+        
+        {/* Main chat area */}
+        <div className={`flex-1 flex flex-col ${!userId ? 'hidden md:flex' : 'flex'}`}>
+          {/* Chat header */}
+          {chatPartner ? (
+            <>
+              <div className="border-b border-gray-200 p-4 flex justify-between items-center bg-white shadow-sm">
+                <div className="flex items-center">
+                  <button 
+                    onClick={() => navigate('/chat')}
+                    className="mr-3 p-1 rounded-full hover:bg-gray-100 md:hidden"
+                    aria-label="Back to messages"
+                  >
+                    <ArrowLeft size={20} className="text-gray-600" />
+                  </button>
+                  <Avatar
+                    src={chatPartner.avatarUrl}
+                    alt={chatPartner.name}
+                    size="md"
+                    status={chatPartner.isOnline ? 'online' : 'offline'}
+                    className="mr-3"
+                  />
+                  
+                  <div>
+                    <h2 className="text-lg font-medium text-gray-900">{chatPartner.name}</h2>
+                    <p className="text-sm text-gray-500">
+                      {chatPartner.isOnline ? 'Online' : 'Offline'}
+                    </p>
+                  </div>
+                </div>
                 
-                <div>
-                  <h2 className="text-lg font-medium text-gray-900">{chatPartner.name}</h2>
-                  <p className="text-sm text-gray-500">
-                    {chatPartner.isOnline ? 'Online' : 'Offline'}
-                  </p>
+                <div className="flex space-x-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="rounded-full p-2"
+                    aria-label="Voice call"
+                  >
+                    <Phone size={18} />
+                  </Button>
+                  
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="rounded-full p-2"
+                    aria-label="Video call"
+                  >
+                    <Video size={18} />
+                  </Button>
+                  
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="rounded-full p-2"
+                    aria-label="Info"
+                  >
+                    <Info size={18} />
+                  </Button>
                 </div>
               </div>
               
-              <div className="flex space-x-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="rounded-full p-2"
-                  aria-label="Voice call"
-                >
-                  <Phone size={18} />
-                </Button>
-                
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="rounded-full p-2"
-                  aria-label="Video call"
-                >
-                  <Video size={18} />
-                </Button>
-                
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="rounded-full p-2"
-                  aria-label="Info"
-                >
-                  <Info size={18} />
-                </Button>
-              </div>
-            </div>
-            
-            {/* Messages container */}
-            <div className="flex-1 p-4 overflow-y-auto bg-gray-50/50">
-              {messages.length > 0 ? (
-                <div className="space-y-4">
-                  {messages.map(message => (
-                    <ChatMessage
-                      key={message.id}
-                      message={message}
-                      isCurrentUser={message.senderId === currentUser.id}
-                      partnerAvatarUrl={chatPartner.avatarUrl}
-                      partnerName={chatPartner.name}
-                      currentUserAvatarUrl={currentUser.avatarUrl}
-                      currentUserName={currentUser.name}
-                      onEdit={handleEditMessage}
-                      onDelete={handleDeleteMessage}
-                    />
-                  ))}
-                  <div ref={messagesEndRef} />
-                </div>
-              ) : (
-                <div className="h-full flex flex-col items-center justify-center">
-                  <div className="bg-gray-150 p-4 rounded-full mb-4">
-                    <MessageCircle size={32} className="text-gray-400" />
+              {/* Messages container */}
+              <div className="flex-1 p-4 overflow-y-auto bg-gray-50/50">
+                {messages.length > 0 ? (
+                  <div className="space-y-4">
+                    {messages.map(message => (
+                      <ChatMessage
+                        key={message.id}
+                        message={message}
+                        isCurrentUser={message.senderId === currentUser.id}
+                        partnerAvatarUrl={chatPartner.avatarUrl}
+                        partnerName={chatPartner.name}
+                        currentUserAvatarUrl={currentUser.avatarUrl}
+                        currentUserName={currentUser.name}
+                        onEdit={handleEditMessage}
+                        onDelete={handleDeleteMessage}
+                      />
+                    ))}
+                    <div ref={messagesEndRef} />
                   </div>
-                  <h3 className="text-lg font-medium text-gray-700">No messages yet</h3>
-                  <p className="text-gray-500 mt-1">Send a message to start the conversation</p>
-                </div>
-              )}
-            </div>
-            
-            {/* Message input */}
-            <div className="border-t border-gray-200 p-4 bg-white relative">
-              {/* Hidden file input */}
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileChange}
-                className="hidden"
-              />
-
-              <form onSubmit={handleSendMessage} className="flex space-x-2 items-center">
-                <div className="relative" ref={attachmentMenuRef}>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className={`rounded-full p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 ${showAttachmentMenu ? 'bg-gray-100 text-primary-600' : ''}`}
-                    onClick={() => setShowAttachmentMenu(!showAttachmentMenu)}
-                    aria-label="Attach file"
-                  >
-                    <Paperclip size={20} className={showAttachmentMenu ? 'text-primary-600 rotate-45 transition-transform duration-200' : 'transition-transform duration-200'} />
-                  </Button>
-
-                  {/* Dropdown Menu */}
-                  {showAttachmentMenu && (
-                    <div className="absolute bottom-full left-0 mb-3 bg-white rounded-xl shadow-xl border border-gray-100 py-2 w-64 z-50 origin-bottom-left transition-all">
-                      <div className="px-4 py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                        Send Attachment
-                      </div>
-                      
-                      <button
-                        type="button"
-                        onClick={() => triggerFileInput('pdf')}
-                        className="w-full flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors"
-                      >
-                        <span className="p-2 bg-red-50 text-red-600 rounded-lg mr-3 flex items-center justify-center">
-                          <FileText size={16} />
-                        </span>
-                        Pitch Deck (PDF/PPT)
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => triggerFileInput('excel')}
-                        className="w-full flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-green-50 hover:text-green-600 transition-colors"
-                      >
-                        <span className="p-2 bg-green-50 text-green-600 rounded-lg mr-3 flex items-center justify-center">
-                          <FileSpreadsheet size={16} />
-                        </span>
-                        Financial Model (Excel)
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => triggerFileInput('legal')}
-                        className="w-full flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
-                      >
-                        <span className="p-2 bg-blue-50 text-blue-600 rounded-lg mr-3 flex items-center justify-center">
-                          <Scale size={16} />
-                        </span>
-                        Legal / NDA (DOC/PDF)
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => triggerFileInput('image')}
-                        className="w-full flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-600 transition-colors"
-                      >
-                        <span className="p-2 bg-purple-50 text-purple-600 rounded-lg mr-3 flex items-center justify-center">
-                          <ImageIcon size={16} />
-                        </span>
-                        Product Demo / Image
-                      </button>
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center">
+                    <div className="bg-gray-150 p-4 rounded-full mb-4">
+                      <MessageCircle size={32} className="text-gray-400" />
                     </div>
-                  )}
-                </div>
-                
-                <Input
-                  type="text"
-                  placeholder="Type a message..."
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  fullWidth
-                  className="flex-1"
+                    <h3 className="text-lg font-medium text-gray-700">No messages yet</h3>
+                    <p className="text-gray-500 mt-1">Send a message to start the conversation</p>
+                  </div>
+                )}
+              </div>
+              
+              {/* Message input */}
+              <div className="border-t border-gray-200 p-4 bg-white relative">
+                {/* Hidden file input */}
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  className="hidden"
                 />
-                
-                <Button
-                  type="submit"
-                  size="sm"
-                  disabled={!newMessage.trim()}
-                  className="rounded-full p-2 w-10 h-10 flex items-center justify-center"
-                  aria-label="Send message"
-                >
-                  <Send size={18} />
-                </Button>
-              </form>
+
+                <form onSubmit={handleSendMessage} className="flex space-x-2 items-center">
+                  <div className="relative" ref={attachmentMenuRef}>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className={`rounded-full p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 ${showAttachmentMenu ? 'bg-gray-100 text-primary-600' : ''}`}
+                      onClick={() => setShowAttachmentMenu(!showAttachmentMenu)}
+                      aria-label="Attach file"
+                    >
+                      <Paperclip size={20} className={showAttachmentMenu ? 'text-primary-600 rotate-45 transition-transform duration-200' : 'transition-transform duration-200'} />
+                    </Button>
+
+                    {/* Dropdown Menu */}
+                    {showAttachmentMenu && (
+                      <div className="absolute bottom-full left-0 mb-3 bg-white rounded-xl shadow-xl border border-gray-100 py-2 w-64 z-50 origin-bottom-left transition-all">
+                        <div className="px-4 py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                          Send Attachment
+                        </div>
+                        
+                        <button
+                          type="button"
+                          onClick={() => triggerFileInput('pdf')}
+                          className="w-full flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors"
+                        >
+                          <span className="p-2 bg-red-50 text-red-600 rounded-lg mr-3 flex items-center justify-center">
+                            <FileText size={16} />
+                          </span>
+                          Pitch Deck (PDF/PPT)
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => triggerFileInput('excel')}
+                          className="w-full flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-green-50 hover:text-green-600 transition-colors"
+                        >
+                          <span className="p-2 bg-green-50 text-green-600 rounded-lg mr-3 flex items-center justify-center">
+                            <FileSpreadsheet size={16} />
+                          </span>
+                          Financial Model (Excel)
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => triggerFileInput('legal')}
+                          className="w-full flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                        >
+                          <span className="p-2 bg-blue-50 text-blue-600 rounded-lg mr-3 flex items-center justify-center">
+                            <Scale size={16} />
+                          </span>
+                          Legal / NDA (DOC/PDF)
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => triggerFileInput('image')}
+                          className="w-full flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-600 transition-colors"
+                        >
+                          <span className="p-2 bg-purple-50 text-purple-600 rounded-lg mr-3 flex items-center justify-center">
+                            <ImageIcon size={16} />
+                          </span>
+                          Product Image / Video
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <Input
+                    type="text"
+                    placeholder="Type a message..."
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    fullWidth
+                    className="flex-1"
+                  />
+                  
+                  <Button
+                    type="submit"
+                    size="sm"
+                    disabled={!newMessage.trim()}
+                    className="rounded-full p-2 w-10 h-10 flex items-center justify-center"
+                    aria-label="Send message"
+                  >
+                    <Send size={18} />
+                  </Button>
+                </form>
+              </div>
+            </>
+          ) : (
+            <div className="h-full flex flex-col items-center justify-center p-4 bg-gray-50/20">
+              <div className="bg-gray-100 p-6 rounded-full mb-4">
+                <MessageCircle size={48} className="text-gray-400" />
+              </div>
+              <h2 className="text-xl font-medium text-gray-700">Select a conversation</h2>
+              <p className="text-gray-500 mt-2 text-center max-w-xs">
+                Choose a contact from the sidebar or request connection to start a chat.
+              </p>
             </div>
-          </>
-        ) : (
-          <div className="h-full flex flex-col items-center justify-center p-4 bg-gray-50/20">
-            <div className="bg-gray-100 p-6 rounded-full mb-4">
-              <MessageCircle size={48} className="text-gray-400" />
-            </div>
-            <h2 className="text-xl font-medium text-gray-700">Select a conversation</h2>
-            <p className="text-gray-500 mt-2 text-center max-w-xs">
-              Choose a contact from the sidebar or request connection to start a chat.
-            </p>
-          </div>
-        )}
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 };

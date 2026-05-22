@@ -2,35 +2,50 @@ import React, { useState, useEffect, useRef } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { Message } from '../../types';
 import { Avatar } from '../ui/Avatar';
-import { FileText, FileSpreadsheet, Download, Scale, ChevronDown, Edit2, Trash2, Check, X } from 'lucide-react';
+import { FileText, FileSpreadsheet, Download, Scale, ChevronDown, Edit2, Trash2, Check, X, Play, Video as VideoIcon } from 'lucide-react';
 
-const formatImageName = (timestamp: string | Date, originalName: string) => {
+// ─────────────────────────────────────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+const formatMediaName = (
+  timestamp: string | Date,
+  originalName: string,
+  isVideo: boolean
+): { displayName: string; downloadName: string } => {
   try {
     const d = new Date(timestamp);
     const year = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
-    
+
     let hours = d.getHours();
     const minutes = String(d.getMinutes()).padStart(2, '0');
     const seconds = String(d.getSeconds()).padStart(2, '0');
     const ampm = hours >= 12 ? 'PM' : 'AM';
     hours = hours % 12;
-    hours = hours ? hours : 12; // the hour '0' should be '12'
-    
-    const ext = originalName.includes('.') ? originalName.split('.').pop() : 'jpg';
-    
+    hours = hours ? hours : 12;
+
+    const ext = originalName.includes('.') ? originalName.split('.').pop() : isVideo ? 'mp4' : 'jpg';
+    const prefix = isVideo ? 'Nexus Video' : 'Nexus Image';
+
     return {
-      displayName: `Nexus Image ${year}-${month}-${day} at ${hours}.${minutes}.${seconds} ${ampm}`,
-      downloadName: `Nexus Image ${year}-${month}-${day} at ${hours}.${minutes}.${seconds} ${ampm}.${ext}`
+      displayName: `${prefix} ${year}-${month}-${day} at ${hours}.${minutes}.${seconds} ${ampm}`,
+      downloadName: `${prefix} ${year}-${month}-${day} at ${hours}.${minutes}.${seconds} ${ampm}.${ext}`
     };
-  } catch (err) {
+  } catch {
+    const prefix = isVideo ? 'Nexus Video' : 'Nexus Image';
+    const ext = originalName.includes('.') ? originalName.split('.').pop() : isVideo ? 'mp4' : 'jpg';
     return {
-      displayName: 'Nexus Image',
-      downloadName: `Nexus_Image.${originalName.includes('.') ? originalName.split('.').pop() : 'jpg'}`
+      displayName: prefix,
+      downloadName: `${prefix}.${ext}`
     };
   }
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Component
+// ─────────────────────────────────────────────────────────────────────────────
 
 interface ChatMessageProps {
   message: Message;
@@ -55,7 +70,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
 }) => {
   const avatarUrl = (isCurrentUser ? currentUserAvatarUrl : partnerAvatarUrl) || '';
   const name = isCurrentUser ? currentUserName : partnerName;
-  
+
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(message.content);
   const [showMenu, setShowMenu] = useState(false);
@@ -63,18 +78,13 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
   const [showLightbox, setShowLightbox] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Download file locally using the backend download endpoint to preserve original filename
+  // ─── Download helper ───────────────────────────────────────────────────────
   const downloadFile = (url: string, fileName: string) => {
     try {
-      // Replace static '/uploads/' path with download endpoint '/api/documents/download/'
       let downloadUrl = url.replace('/uploads/', '/api/documents/download/');
-      
       if (fileName) {
         downloadUrl += `?name=${encodeURIComponent(fileName)}`;
       }
-      
-      // Navigate to download URL; since it returns Content-Disposition: attachment,
-      // the browser will download it without navigating away from the page.
       window.location.href = downloadUrl;
     } catch (error) {
       console.error('Download failed, falling back to open in new tab:', error);
@@ -82,20 +92,15 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
     }
   };
 
-  // Close lightbox on Escape key press
+  // ─── Keyboard listeners ────────────────────────────────────────────────────
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setShowLightbox(false);
-      }
+      if (event.key === 'Escape') setShowLightbox(false);
     };
-    if (showLightbox) {
-      window.addEventListener('keydown', handleEscape);
-    }
+    if (showLightbox) window.addEventListener('keydown', handleEscape);
     return () => window.removeEventListener('keydown', handleEscape);
   }, [showLightbox]);
 
-  // Close menus on click outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -133,7 +138,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
     }
   };
 
-  // Check if message content is a JSON attachment payload
+  // ─── Parse attachment ──────────────────────────────────────────────────────
   let isAttachment = false;
   let attachmentData: any = null;
 
@@ -146,29 +151,69 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
     }
   }
 
-  const formattedNames = isAttachment && attachmentData && attachmentData.fileType === 'image'
-    ? formatImageName(message.timestamp, attachmentData.fileName)
-    : null;
+  const isVideo = isAttachment && attachmentData?.fileType === 'video';
+  const isImage = isAttachment && attachmentData?.fileType === 'image';
 
+  const formattedNames =
+    isAttachment && attachmentData && (isImage || isVideo)
+      ? formatMediaName(message.timestamp, attachmentData.fileName, isVideo)
+      : null;
+
+  // ─── Render attachment ─────────────────────────────────────────────────────
   const renderAttachment = () => {
     if (!attachmentData) return null;
     const fileUrl = attachmentData.fileUrl;
     const fullFileUrl = fileUrl.startsWith('http') ? fileUrl : `http://localhost:5000${fileUrl}`;
+    const caption: string | undefined = attachmentData.caption;
 
-    if (attachmentData.fileType === 'image') {
+    // ── Image ──────────────────────────────────────────────────────────────
+    if (isImage) {
       return (
-        <div className="rounded-lg overflow-hidden border border-gray-200 bg-gray-50 max-w-xs sm:max-w-sm relative">
-          <img 
-            src={fullFileUrl} 
-            alt={attachmentData.fileName} 
-            className="max-h-60 object-cover w-full cursor-pointer hover:opacity-95 transition-opacity"
+        <div className="rounded-xl overflow-hidden border border-gray-200 bg-gray-50 max-w-xs sm:max-w-sm">
+          <img
+            src={fullFileUrl}
+            alt={attachmentData.fileName}
+            className="max-h-64 object-cover w-full cursor-pointer hover:opacity-95 transition-opacity"
             onClick={() => setShowLightbox(true)}
           />
+          {caption && (
+            <div className={`px-3 py-2 text-sm ${isCurrentUser ? 'bg-primary-600 text-white' : 'bg-white text-gray-800'}`}>
+              {caption}
+            </div>
+          )}
         </div>
       );
     }
 
-    // Document / PDF / Spreadsheet Card
+    // ── Video ──────────────────────────────────────────────────────────────
+    if (isVideo) {
+      return (
+        <div className="rounded-xl overflow-hidden border border-gray-200 bg-black max-w-xs sm:max-w-sm">
+          {/* Thumbnail / clickable area */}
+          <div className="relative cursor-pointer group" onClick={() => setShowLightbox(true)}>
+            <video
+              src={fullFileUrl}
+              className="max-h-64 w-full object-cover"
+              preload="metadata"
+              muted
+            />
+            {/* Play button overlay */}
+            <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/40 transition-colors">
+              <div className="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                <Play size={20} className="text-gray-900 ml-1" fill="currentColor" />
+              </div>
+            </div>
+          </div>
+          {caption && (
+            <div className={`px-3 py-2 text-sm ${isCurrentUser ? 'bg-primary-600 text-white' : 'bg-white text-gray-800'}`}>
+              {caption}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // ── Document / PDF / Spreadsheet Card ─────────────────────────────────
     const isPdf = attachmentData.fileType === 'pdf';
     const isExcel = attachmentData.fileType === 'excel';
     const isLegal = attachmentData.fileType === 'legal';
@@ -192,14 +237,14 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
           </p>
           <p className="text-xs text-gray-500 truncate">
             {attachmentData.fileSize} • {
-              isPdf ? 'PITCH DECK' : 
-              isExcel ? 'FINANCIAL MODEL' : 
+              isPdf ? 'PITCH DECK' :
+              isExcel ? 'FINANCIAL MODEL' :
               isLegal ? 'LEGAL/NDA' : 'DOCUMENT'
             }
           </p>
         </div>
         
-        <button 
+        <button
           type="button"
           onClick={(e) => {
             e.stopPropagation();
@@ -214,10 +259,14 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
     );
   };
 
+  // ─── Download name for dropdown / lightbox ─────────────────────────────────
+  const resolvedDownloadName = formattedNames
+    ? formattedNames.downloadName
+    : attachmentData?.fileName;
+
+  // ─────────────────────────────────────────────────────────────────────────
   return (
-    <div
-      className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'} mb-4 animate-fade-in`}
-    >
+    <div className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'} mb-4 animate-fade-in`}>
       {!isCurrentUser && (
         <Avatar
           src={avatarUrl}
@@ -232,7 +281,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
           <div
             className={`max-w-xs sm:max-w-md rounded-lg relative ${
               isAttachment
-                ? 'p-1 bg-transparent' // Render attachment without standard bubble colors for cards
+                ? 'p-1 bg-transparent'
                 : `px-4 py-2 ${
                     isCurrentUser
                       ? 'bg-primary-600 text-white rounded-br-none'
@@ -240,7 +289,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
                   }`
             }`}
           >
-            {/* Chevron Down Dropdown Trigger inside bubble/card */}
+            {/* ─── Chevron dropdown trigger ───────────────────────────── */}
             {((isCurrentUser && !isAttachment) || isAttachment) && !isEditing && (
               <div className="absolute top-1.5 right-1.5 z-20">
                 <button
@@ -259,10 +308,10 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
                 >
                   <ChevronDown size={14} />
                 </button>
-                
-                {/* Dropdown Menu absolutely positioned relative to Chevron button */}
+
+                {/* Dropdown menu */}
                 {showMenu && (
-                  <div className={`absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg py-1 w-32 z-50 text-gray-800 animate-fade-in`}>
+                  <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg py-1 w-32 z-50 text-gray-800 animate-fade-in">
                     {isAttachment ? (
                       <>
                         <button
@@ -271,7 +320,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
                             setShowMenu(false);
                             const fileUrl = attachmentData.fileUrl;
                             const fullFileUrl = fileUrl.startsWith('http') ? fileUrl : `http://localhost:5000${fileUrl}`;
-                            downloadFile(fullFileUrl, (formattedNames && formattedNames.downloadName) || attachmentData.fileName);
+                            downloadFile(fullFileUrl, resolvedDownloadName);
                           }}
                           className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 flex items-center font-medium"
                         >
@@ -322,7 +371,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
                   </div>
                 )}
 
-                {/* Delete Confirmation Box absolutely positioned relative to Chevron button */}
+                {/* Delete confirmation */}
                 {showDeleteConfirm && (
                   <div className="absolute right-0 top-full mt-1 bg-white border border-red-100 rounded-lg shadow-xl p-3 w-44 z-50 text-gray-800 animate-fade-in">
                     <p className="text-xs font-semibold text-gray-900 mb-2">Delete message completely?</p>
@@ -347,6 +396,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
               </div>
             )}
 
+            {/* ─── Content ─────────────────────────────────────────────── */}
             {isEditing ? (
               <div className="flex flex-col space-y-1.5 min-w-[200px]">
                 <textarea
@@ -377,8 +427,8 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
                     onClick={handleSave}
                     disabled={!editValue.trim() || editValue.trim() === message.content}
                     className={`p-1 rounded-full transition-colors ${
-                      isCurrentUser 
-                        ? 'hover:bg-primary-700 text-white disabled:text-primary-400' 
+                      isCurrentUser
+                        ? 'hover:bg-primary-700 text-white disabled:text-primary-400'
                         : 'hover:bg-gray-200 text-primary-600 disabled:text-gray-400'
                     }`}
                     title="Save"
@@ -394,13 +444,13 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
             )}
           </div>
         </div>
-        
+
         <span className="text-xs text-gray-500 mt-1 flex items-center">
           {message.isEdited && <span className="mr-1 text-gray-400 font-normal italic">(edited)</span>}
           {formatDistanceToNow(new Date(message.timestamp), { addSuffix: true })}
         </span>
       </div>
-      
+
       {isCurrentUser && (
         <Avatar
           src={avatarUrl}
@@ -410,30 +460,43 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
         />
       )}
 
+      {/* ─────────────────────────────────────────────────────────────────── */}
+      {/* Lightbox (Image or Video)                                          */}
+      {/* ─────────────────────────────────────────────────────────────────── */}
       {showLightbox && attachmentData && (
-        <div 
-          className="fixed inset-0 bg-gray-950/95 backdrop-blur-md z-[999] flex flex-col justify-between animate-fade-in"
+        <div
+          className="fixed inset-0 bg-gray-950/97 backdrop-blur-md z-[999] flex flex-col justify-between animate-fade-in"
           onClick={() => setShowLightbox(false)}
         >
           {/* Lightbox Header */}
-          <div 
-            className="flex items-center justify-between p-4 bg-gray-900/50 backdrop-blur-sm border-b border-white/10 text-white z-10"
+          <div
+            className="flex items-center justify-between p-4 bg-gray-900/60 backdrop-blur-sm border-b border-white/10 text-white z-10"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex flex-col min-w-0 pr-4">
-              <span className="text-sm font-semibold truncate text-left">{(formattedNames && formattedNames.displayName) || attachmentData.fileName}</span>
-              <span className="text-xs text-gray-400 text-left">{attachmentData.fileSize}</span>
+            <div className="flex items-center space-x-3 min-w-0 pr-4">
+              <div className={`p-2 rounded-lg ${isVideo ? 'bg-purple-500/20' : 'bg-blue-500/20'}`}>
+                {isVideo
+                  ? <VideoIcon size={16} className="text-purple-400" />
+                  : <Play size={16} className="text-blue-400" />
+                }
+              </div>
+              <div className="min-w-0">
+                <span className="text-sm font-semibold truncate block text-left">
+                  {(formattedNames && formattedNames.displayName) || attachmentData.fileName}
+                </span>
+                <span className="text-xs text-gray-400 text-left block">{attachmentData.fileSize}</span>
+              </div>
             </div>
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-3">
               <button
                 type="button"
                 onClick={() => {
                   const fileUrl = attachmentData.fileUrl;
                   const fullFileUrl = fileUrl.startsWith('http') ? fileUrl : `http://localhost:5000${fileUrl}`;
-                  downloadFile(fullFileUrl, (formattedNames && formattedNames.downloadName) || attachmentData.fileName);
+                  downloadFile(fullFileUrl, resolvedDownloadName);
                 }}
                 className="p-2 rounded-full hover:bg-white/10 text-gray-200 hover:text-white transition-colors focus:outline-none"
-                title="Download file locally"
+                title="Download"
               >
                 <Download size={20} />
               </button>
@@ -441,29 +504,51 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
                 type="button"
                 onClick={() => setShowLightbox(false)}
                 className="p-2 rounded-full hover:bg-white/10 text-gray-200 hover:text-white transition-colors focus:outline-none"
-                title="Close preview"
+                title="Close"
               >
                 <X size={20} />
               </button>
             </div>
           </div>
 
-          {/* Lightbox Image Container */}
-          <div 
-            className="flex-1 flex items-center justify-center p-4 relative"
+          {/* Media Content */}
+          <div
+            className="flex-1 flex items-center justify-center p-4"
             onClick={() => setShowLightbox(false)}
           >
-            <img
-              src={attachmentData.fileUrl.startsWith('http') ? attachmentData.fileUrl : `http://localhost:5000${attachmentData.fileUrl}`}
-              alt={attachmentData.fileName}
-              className="max-w-full max-h-[85vh] object-contain rounded shadow-2xl select-none cursor-zoom-out"
-              onClick={(e) => e.stopPropagation()}
-            />
+            {isVideo ? (
+              <video
+                src={attachmentData.fileUrl.startsWith('http')
+                  ? attachmentData.fileUrl
+                  : `http://localhost:5000${attachmentData.fileUrl}`}
+                controls
+                autoPlay
+                className="max-w-full max-h-[85vh] rounded-xl shadow-2xl"
+                onClick={(e) => e.stopPropagation()}
+              />
+            ) : (
+              <img
+                src={attachmentData.fileUrl.startsWith('http')
+                  ? attachmentData.fileUrl
+                  : `http://localhost:5000${attachmentData.fileUrl}`}
+                alt={attachmentData.fileName}
+                className="max-w-full max-h-[85vh] object-contain rounded-xl shadow-2xl select-none cursor-zoom-out"
+                onClick={(e) => e.stopPropagation()}
+              />
+            )}
           </div>
-          
-          {/* Lightbox Footer */}
-          <div className="p-3 bg-gray-900/20 text-center text-xs text-gray-400 select-none">
-            Click anywhere outside or press Escape to close
+
+          {/* Lightbox Footer — show caption if present */}
+          <div
+            className="p-3 bg-gray-900/30 text-center select-none"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {attachmentData.caption && (
+              <p className="text-white text-sm mb-1 font-medium">{attachmentData.caption}</p>
+            )}
+            <p className="text-xs text-gray-500">
+              Click anywhere outside or press Escape to close
+            </p>
           </div>
         </div>
       )}
