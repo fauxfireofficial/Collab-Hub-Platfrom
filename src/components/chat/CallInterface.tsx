@@ -6,6 +6,7 @@ import {
   useLocalMicrophoneTrack,
   useJoin,
   useRemoteUsers,
+  useRemoteAudioTracks,
   RemoteUser,
   LocalVideoTrack,
   usePublish,
@@ -108,6 +109,16 @@ const CallContent: React.FC<CallInterfaceProps> = ({
   const remoteUsers  = useRemoteUsers();
   const isConnected  = remoteUsers.length > 0;
   const callDuration = useCallTimer(isConnected);
+
+  // ── Remote audio tracks – explicit play ensures autoplay policies are met ───
+  const { audioTracks } = useRemoteAudioTracks(remoteUsers);
+  useEffect(() => {
+    audioTracks.forEach(track => {
+      track.setVolume(speakerOn ? 100 : 0);
+      // play() is idempotent – safe to call even if already playing
+      track.play();
+    });
+  }, [audioTracks, speakerOn]);
 
   // ── Publish tracks ──────────────────────────────────────────────────────────
   // useMemo stabilises the array reference so usePublish doesn't loop
@@ -219,11 +230,19 @@ const CallContent: React.FC<CallInterfaceProps> = ({
             </div>
           ))}
 
-        {/* Remote audio (audio call – invisible, just plays) */}
+        {/* Remote audio (audio call) – rendered but visually hidden; NOT aria-hidden
+             so browser autoplay policies allow audio to play */}
         {callType === 'audio' &&
           remoteUsers.map(user => (
-            <div key={user.uid} className="hidden" aria-hidden>
-              <RemoteUser user={user} playVideo={false} playAudio={speakerOn} />
+            <div
+              key={user.uid}
+              style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none' }}
+            >
+              <RemoteUser
+                user={user}
+                playVideo={false}
+                playAudio={true}  // always true; volume controlled via track.setVolume above
+              />
             </div>
           ))}
 
