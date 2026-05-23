@@ -10,6 +10,12 @@ import { useAuth } from '../../context/AuthContext';
 import { Message } from '../../types';
 import api from '../../services/api';
 import { MessageCircle } from 'lucide-react';
+import { io, Socket } from 'socket.io-client';
+import { IncomingCallModal } from '../../components/chat/IncomingCallModal';
+import { CallInterface } from '../../components/chat/CallInterface';
+import toast from 'react-hot-toast';
+
+const SIGNALING_URL = import.meta.env.VITE_API_BASE || 'http://localhost:5000';
 
 export const ChatPage: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();
@@ -20,6 +26,11 @@ export const ChatPage: React.FC = () => {
   const [conversations, setConversations] = useState<any[]>([]);
   const messagesEndRef = useRef<null | HTMLDivElement>(null);
   const [chatPartner, setChatPartner] = useState<any | null>(null);
+  
+  // Call States
+  const [socket, setSocket] = useState<Socket | null>(null);
+  const [incomingCall, setIncomingCall] = useState<any>(null);
+  const [activeCall, setActiveCall] = useState<{ channelName: string; partnerName: string; partnerAvatar?: string; callType: 'audio' | 'video'; token?: string | null; isCaller: boolean; partnerId: string } | null>(null);
   
   // File Upload / Attachment States
   const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
@@ -174,6 +185,38 @@ export const ChatPage: React.FC = () => {
   useEffect(() => {
     if (currentUser) {
       fetchConversations();
+
+      // Initialize Socket connection
+      const newSocket = io(SIGNALING_URL, { transports: ['websocket'] });
+      setSocket(newSocket);
+
+      newSocket.on('connect', () => {
+        newSocket.emit('register-user', currentUser.id);
+      });
+
+      newSocket.on('incoming-call', (data: any) => {
+        setIncomingCall(data);
+      });
+
+      newSocket.on('call-accepted', (data: any) => {
+        // Partner accepted our call
+        setActiveCall(prev => prev ? { ...prev, channelName: data.channelName } : null);
+      });
+
+      newSocket.on('call-rejected', () => {
+        toast.error('Call was declined.');
+        setActiveCall(null);
+      });
+
+      newSocket.on('call-ended', () => {
+        toast('Call ended', { icon: '📞' });
+        setActiveCall(null);
+        setIncomingCall(null);
+      });
+
+      return () => {
+        newSocket.disconnect();
+      };
     }
   }, [currentUser, userId]);
   
@@ -271,10 +314,114 @@ export const ChatPage: React.FC = () => {
     }
   };
   
+  // Calling Handlers
+  const handleStartCall = async (callType: 'audio' | 'video') => {
+    if (!chatPartner || !socket || !currentUser) return;
+    // Agora channel names must be ≤64 bytes.
+    // Old format with full MongoDB ObjectIDs was 71 chars — too long.
+    // Use last 8 chars of each ID + base-36 timestamp (~8 chars) = ~27 chars total.
+    const id1 = currentUser.id.slice(-8);
+    const id2 = chatPartner.id.slice(-8);
+    const ts  = Date.now().toString(36);
+    const channelName = `call-${id1}-${id2}-${ts}`;
+    
+    let token: string | null = null;
+    try {
+      const res = await api.get(`/chat/agora-token?channelName=${channelName}`);
+      token = res.data.token;
+    } catch(err) {
+      console.error('Token fetch failed', err);
+    }
+
+    // Set our active call immediately (Ringing state)
+    setActiveCall({
+      channelName,
+      partnerName: chatPartner.name,
+      partnerAvatar: chatPartner.avatarUrl,
+      callType,
+      token,
+      isCaller: true,
+      partnerId: chatPartner.id,
+    });
+
+    socket.emit('call-user', {
+      userToCall: chatPartner.id,
+      from: currentUser.id,
+      callerName: currentUser.name,
+      callerAvatar: currentUser.avatarUrl,
+      callType,
+      channelName
+    });
+  };
+
+  const handleAcceptCall = async () => {
+    if (!incomingCall || !socket) return;
+    
+    let token: string | null = null;
+    try {
+      const res = await api.get(`/chat/agora-token?channelName=${incomingCall.channelName}`);
+      token = res.data.token;
+    } catch(err) {
+      console.error('Token fetch failed', err);
+    }
+
+    setActiveCall({
+      channelName: incomingCall.channelName,
+      partnerName: incomingCall.callerName,
+      partnerAvatar: incomingCall.callerAvatar,
+      callType: incomingCall.callType,
+      token,
+      isCaller: false,
+      partnerId: incomingCall.from,
+    });
+    socket.emit('accept-call', { to: incomingCall.from, channelName: incomingCall.channelName });
+    setIncomingCall(null);
+  };
+
+  const handleRejectCall = () => {
+    if (!incomingCall || !socket) return;
+    socket.emit('reject-call', { to: incomingCall.from });
+    setIncomingCall(null);
+  };
+
+  const handleEndCall = () => {
+    // Use partnerId stored in activeCall so this works regardless of chat window state
+    if (activeCall && socket) {
+      socket.emit('end-call', { to: activeCall.partnerId });
+    }
+    setActiveCall(null);
+    setIncomingCall(null);
+  };
+
   if (!currentUser) return null;
   
   return (
     <>
+      {/* ───────────────────────────────────────────────── */}
+      {/* Calling Overlays                                 */}
+      {/* ───────────────────────────────────────────────── */}
+      {incomingCall && !activeCall && (
+        <IncomingCallModal
+          callerName={incomingCall.callerName}
+          callerAvatar={incomingCall.callerAvatar}
+          callType={incomingCall.callType}
+          onAccept={handleAcceptCall}
+          onReject={handleRejectCall}
+        />
+      )}
+
+      {activeCall && (
+        <CallInterface
+          channelName={activeCall.channelName}
+          callType={activeCall.callType}
+          partnerName={activeCall.partnerName}
+          partnerAvatar={activeCall.partnerAvatar}
+          token={activeCall.token || null}
+          isCaller={activeCall.isCaller}
+          onEndCall={handleEndCall}
+        />
+      )}
+
       {/* ───────────────────────────────────────────────── */}
       {/* WhatsApp-like Media Preview Modal                */}
       {/* ───────────────────────────────────────────────── */}
@@ -421,6 +568,7 @@ export const ChatPage: React.FC = () => {
                     size="sm"
                     className="rounded-full p-2"
                     aria-label="Voice call"
+                    onClick={() => handleStartCall('audio')}
                   >
                     <Phone size={18} />
                   </Button>
@@ -430,6 +578,7 @@ export const ChatPage: React.FC = () => {
                     size="sm"
                     className="rounded-full p-2"
                     aria-label="Video call"
+                    onClick={() => handleStartCall('video')}
                   >
                     <Video size={18} />
                   </Button>

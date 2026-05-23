@@ -1,6 +1,6 @@
 import React from 'react';
 
-export type AvatarSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+export type AvatarSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'xxl';
 
 interface AvatarProps {
   src: string;
@@ -23,6 +23,7 @@ export const Avatar: React.FC<AvatarProps> = ({
     md: 'h-10 w-10',
     lg: 'h-12 w-12',
     xl: 'h-16 w-16',
+    xxl: 'h-32 w-32 md:h-40 md:w-40',
   };
   
   const statusColors = {
@@ -38,6 +39,7 @@ export const Avatar: React.FC<AvatarProps> = ({
     md: 'h-2.5 w-2.5',
     lg: 'h-3 w-3',
     xl: 'h-4 w-4',
+    xxl: 'h-6 w-6',
   };
   
   const getAvatarSrc = (url: string) => {
@@ -50,7 +52,7 @@ export const Avatar: React.FC<AvatarProps> = ({
   };
   
   return (
-    <div className={`relative inline-block ${className}`}>
+    <div className={`relative inline-block rounded-full ${className}`}>
       <img
         src={getAvatarSrc(src)}
         alt={alt}

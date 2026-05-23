@@ -65,6 +65,35 @@ app.use((err, req, res, next) => {
 io.on('connection', (socket) => {
   console.log('Socket client connected:', socket.id);
 
+  // Chat Calling Signaling
+  socket.on('register-user', (userId) => {
+    socket.join(userId);
+    console.log(`User ${userId} registered for private socket events`);
+  });
+
+  socket.on('call-user', ({ userToCall, from, callerName, callerAvatar, callType, channelName }) => {
+    socket.to(userToCall).emit('incoming-call', { 
+      from, 
+      callerName,
+      callerAvatar,
+      callType,
+      channelName
+    });
+  });
+
+  socket.on('accept-call', ({ to, channelName }) => {
+    socket.to(to).emit('call-accepted', { channelName });
+  });
+
+  socket.on('reject-call', ({ to }) => {
+    socket.to(to).emit('call-rejected');
+  });
+
+  socket.on('end-call', ({ to }) => {
+    socket.to(to).emit('call-ended');
+  });
+
+
   socket.on('join-room', ({ roomId, userId }) => {
     socket.join(roomId);
     console.log(`User ${userId} joined WebRTC room ${roomId}`);

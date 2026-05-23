@@ -26,7 +26,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
     : 'border-gray-300 focus:ring-primary-500/20 focus:border-primary-500 bg-white hover:border-gray-400';
   
   const inputBaseClass = `block rounded-lg border px-3 py-2.5 shadow-sm focus:outline-none focus:ring-4 transition-all duration-200 ease-in-out sm:text-sm ${errorClass}`;
-  const adornmentClass = startAdornment ? 'pl-10' : '';
+  const startAdornmentClass = startAdornment ? 'pl-10' : '';
+  const endAdornmentClass = endAdornment ? 'pr-10' : '';
+  const adornmentClass = `${startAdornmentClass} ${endAdornmentClass}`;
   
   return (
     <div className={`${widthClass} ${className}`}>
@@ -50,7 +52,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
         />
         
         {endAdornment && (
-          <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-gray-500">
+          <div className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 z-10">
             {endAdornment}
           </div>
         )}
