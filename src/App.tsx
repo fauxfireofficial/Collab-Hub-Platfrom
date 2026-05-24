@@ -1,5 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { useAuth } from './context/AuthContext';
 import { AuthProvider } from './context/AuthContext';
+import { NotificationProvider } from './context/NotificationContext';
 
 // Layouts
 import { DashboardLayout } from './components/layout/DashboardLayout';
@@ -34,10 +36,18 @@ import { MeetingsPage } from './pages/meetings/MeetingsPage';
 import { VideoCallPage } from './pages/video/VideoCallPage';
 import { PaymentsPage } from './pages/payments/PaymentsPage';
 
+// Smart root redirect based on auth state
+const RootRedirect = () => {
+  const { user } = useAuth();
+  if (!user) return <Navigate to="/login" replace />;
+  return <Navigate to={user.role === 'investor' ? '/dashboard/investor' : '/dashboard/entrepreneur'} replace />;
+};
+
 function App() {
   return (
     <AuthProvider>
-      <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <NotificationProvider>
+        <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <Routes>
           {/* Authentication Routes */}
           <Route path="/login" element={<LoginPage />} />
@@ -109,13 +119,14 @@ function App() {
             <Route index element={<PaymentsPage />} />
           </Route>
           
-          {/* Redirect root to login */}
-          <Route path="/" element={<Navigate to="/login" replace />} />
+          {/* Smart root redirect */}
+          <Route path="/" element={<RootRedirect />} />
           
           {/* Catch all other routes and redirect to login */}
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
-      </Router>
+        </Router>
+      </NotificationProvider>
     </AuthProvider>
   );
 }

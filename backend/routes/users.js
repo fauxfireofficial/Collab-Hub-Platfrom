@@ -2,6 +2,7 @@ import express from 'express';
 import User from '../models/User.js';
 import CollaborationRequest from '../models/CollaborationRequest.js';
 import { auth } from '../middleware/auth.js';
+import { createNotification } from './notifications.js';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
@@ -145,6 +146,19 @@ router.post('/connect', auth, async (req, res) => {
     });
 
     await connection.save();
+
+    // ── Real-time notification to recipient ──────────────────────────────────
+    const io = req.app.get('io');
+    const senderName = req.user.name || 'Someone';
+    await createNotification(io, {
+      recipientId: recipientId,
+      senderId:    req.user.id,
+      type:        'connection_request',
+      content:     `${senderName} sent you a connection request`,
+      link:        `/profile/${req.user.role}/${req.user.id}`
+    });
+    // ────────────────────────────────────────────────────────────────────────
+
     res.status(201).json(connection);
   } catch (error) {
     console.error('Connect error:', error);
@@ -218,6 +232,27 @@ router.put('/connect/requests/:id', auth, async (req, res) => {
 
     request.status = status;
     await request.save();
+
+    // ── Real-time notification on acceptance ─────────────────────────────────
+    if (status === 'accepted') {
+      const io = req.app.get('io');
+      const acceptorName = req.user.name || 'Someone';
+      // Notify the one who SENT the request (the other party)
+      const notifyUserId =
+        req.user.role === 'investor'
+          ? request.entrepreneurId.toString()
+          : request.investorId.toString();
+
+      await createNotification(io, {
+        recipientId: notifyUserId,
+        senderId:    req.user.id,
+        type:        'connection_accepted',
+        content:     `${acceptorName} accepted your connection request`,
+        link:        `/profile/${req.user.role}/${req.user.id}`
+      });
+    }
+    // ────────────────────────────────────────────────────────────────────────
+
     res.json(request);
   } catch (error) {
     console.error('Update request error:', error);

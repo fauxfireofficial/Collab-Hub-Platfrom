@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { User, Mail, Lock, CircleDollarSign, Building2, AlertCircle, KeyRound, CheckCircle2 } from 'lucide-react';
+import { User, Mail, Lock, CircleDollarSign, Building2, AlertCircle, KeyRound, CheckCircle2, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -17,6 +17,7 @@ export const RegisterPage: React.FC = () => {
   
   // Verification States
   const [showVerification, setShowVerification] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [tempUserId, setTempUserId] = useState('');
   const [verificationEmail, setVerificationEmail] = useState('');
   const [otpCode, setOtpCode] = useState('');
@@ -187,25 +188,45 @@ export const RegisterPage: React.FC = () => {
                 startAdornment={<Mail size={18} />}
               />
               
-              <Input
-                label="Password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                fullWidth
-                startAdornment={<Lock size={18} />}
-              />
-              
-              <Input
-                label="Confirm password"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                fullWidth
-                startAdornment={<Lock size={18} />}
-              />
+              <div className="relative flex items-center">
+                <div className="flex-grow">
+                  <Input
+                    label="Password"
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    fullWidth
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-0 bottom-2.5 mr-3 text-gray-500 hover:text-gray-700"
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
+
+              <div className="relative flex items-center">
+                <div className="flex-grow">
+                  <Input
+                    label="Confirm password"
+                    type={showPassword ? "text" : "password"}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                    fullWidth
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-0 bottom-2.5 mr-3 text-gray-500 hover:text-gray-700"
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
               
               <div className="flex items-center">
                 <input

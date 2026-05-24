@@ -6,10 +6,11 @@ import {
   useLocalMicrophoneTrack,
   useJoin,
   useRemoteUsers,
-  useRemoteAudioTracks,
   RemoteUser,
   LocalVideoTrack,
   usePublish,
+  RemoteAudioTrack,
+  useRemoteAudioTracks,
 } from 'agora-rtc-react';
 import { Mic, MicOff, Video, VideoOff, PhoneOff, Volume2, VolumeX } from 'lucide-react';
 import { Avatar } from '../ui/Avatar';
@@ -86,21 +87,41 @@ const CallContent: React.FC<CallInterfaceProps> = ({
   );
 
   // ── Local tracks ────────────────────────────────────────────────────────────
-  const { localMicrophoneTrack, error: micError } = useLocalMicrophoneTrack(micOn);
-  const { localCameraTrack,    error: camError  } = useLocalCameraTrack(
-    callType === 'video' && cameraOn,
+  const { localMicrophoneTrack, error: micError, isLoading: isMicLoading } = useLocalMicrophoneTrack(true);
+  const { localCameraTrack,    error: camError,  isLoading: isCamLoading } = useLocalCameraTrack(
+    callType === 'video',
   );
+
+  // Toggle mic track enablement based on micOn state
+  useEffect(() => {
+    if (localMicrophoneTrack) {
+      console.log('[CallInterface] Setting mic enabled:', micOn);
+      localMicrophoneTrack.setEnabled(micOn).catch((err) => {
+        console.error('[CallInterface] Failed to toggle mic track:', err);
+      });
+    }
+  }, [localMicrophoneTrack, micOn]);
+
+  // Toggle camera track enablement based on cameraOn state
+  useEffect(() => {
+    if (localCameraTrack) {
+      console.log('[CallInterface] Setting camera enabled:', cameraOn);
+      localCameraTrack.setEnabled(cameraOn).catch((err) => {
+        console.error('[CallInterface] Failed to toggle camera track:', err);
+      });
+    }
+  }, [localCameraTrack, cameraOn]);
 
   useEffect(() => {
     if (micError) {
-      console.error('Mic error:', micError);
+      console.error('[CallInterface] Mic error:', micError);
       toast.error('Microphone access denied – check browser permissions.');
     }
   }, [micError]);
 
   useEffect(() => {
     if (camError) {
-      console.error('Cam error:', camError);
+      console.error('[CallInterface] Cam error:', camError);
       toast.error('Camera access denied – check browser permissions.');
     }
   }, [camError]);
@@ -110,27 +131,32 @@ const CallContent: React.FC<CallInterfaceProps> = ({
   const isConnected  = remoteUsers.length > 0;
   const callDuration = useCallTimer(isConnected);
 
-  // ── Remote audio tracks – explicit play ensures autoplay policies are met ───
-  const { audioTracks } = useRemoteAudioTracks(remoteUsers);
+  // Subscribe to remote audio tracks explicitly
+  const { audioTracks: remoteAudioTracks } = useRemoteAudioTracks(remoteUsers);
+
+  // Debug: log remote user status
   useEffect(() => {
-    audioTracks.forEach(track => {
-      track.setVolume(speakerOn ? 100 : 0);
-      // play() is idempotent – safe to call even if already playing
-      track.play();
+    console.log('[CallInterface] Remote users count:', remoteUsers.length);
+    remoteUsers.forEach(u => {
+      console.log('[CallInterface] Remote user:', u.uid, '| hasAudio:', u.hasAudio, '| hasVideo:', u.hasVideo);
     });
-  }, [audioTracks, speakerOn]);
+  }, [remoteUsers]);
 
   // ── Publish tracks ──────────────────────────────────────────────────────────
-  // useMemo stabilises the array reference so usePublish doesn't loop
-  const tracks = useMemo(() => {
-    const list: (typeof localMicrophoneTrack | typeof localCameraTrack)[] = [];
-    if (localMicrophoneTrack) list.push(localMicrophoneTrack);
-    if (localCameraTrack)     list.push(localCameraTrack);
-    return list;
+  // Publish tracks only when joined and they are finished loading
+  const readyToPublish = joined && !isMicLoading && (callType === 'audio' || !isCamLoading) && !!localMicrophoneTrack;
+
+  // Filter out null/undefined tracks safely before passing to hook
+  const tracksToPublish = useMemo(() => {
+    return [localMicrophoneTrack, localCameraTrack].filter(Boolean);
   }, [localMicrophoneTrack, localCameraTrack]);
 
-  // Second arg = readyToPublish: wait until we have actually joined
-  usePublish(tracks, joined);
+  // Debug: log publish status
+  useEffect(() => {
+    console.log('[CallInterface] Tracks to publish:', tracksToPublish.length, '| readyToPublish:', readyToPublish);
+  }, [tracksToPublish, readyToPublish]);
+
+  usePublish(tracksToPublish as any, readyToPublish);
 
   // ── Ringback audio (caller only, stops when remote user joins) ──────────────
   const ringbackRef = useRef<HTMLAudioElement | null>(null);
@@ -224,27 +250,19 @@ const CallContent: React.FC<CallInterfaceProps> = ({
               <RemoteUser
                 user={user}
                 playVideo
-                playAudio={speakerOn}
+                playAudio={false} // Disable auto audio to prevent double-playback conflict
                 className="w-full h-full object-cover"
               />
             </div>
           ))}
 
-        {/* Remote audio (audio call) – rendered but visually hidden; NOT aria-hidden
-             so browser autoplay policies allow audio to play */}
-        {callType === 'audio' &&
-          remoteUsers.map(user => (
-            <div
-              key={user.uid}
-              style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none' }}
-            >
-              <RemoteUser
-                user={user}
-                playVideo={false}
-                playAudio={true}  // always true; volume controlled via track.setVolume above
-              />
-            </div>
-          ))}
+        {remoteAudioTracks.map(track => (
+          <RemoteAudioTrack
+            key={track.uid}
+            play={speakerOn}
+            track={track}
+          />
+        ))}
 
         {/* Local camera picture-in-picture (video call only) */}
         {callType === 'video' && cameraOn && localCameraTrack && (

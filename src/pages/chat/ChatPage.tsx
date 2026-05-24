@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Send, Phone, Video, Info, ArrowLeft, Paperclip, FileSpreadsheet, Scale, Image as ImageIcon, FileText, X, Loader2 } from 'lucide-react';
+import { Send, Phone, Video, Info, ArrowLeft, Paperclip, FileSpreadsheet, Scale, Image as ImageIcon, FileText, X, Loader2, Mic, Trash2, Play, Pause } from 'lucide-react';
 import { Avatar } from '../../components/ui/Avatar';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -25,6 +25,8 @@ export const ChatPage: React.FC = () => {
   const [newMessage, setNewMessage] = useState('');
   const [conversations, setConversations] = useState<any[]>([]);
   const messagesEndRef = useRef<null | HTMLDivElement>(null);
+  const messagesContainerRef = useRef<null | HTMLDivElement>(null);
+  const isAtBottomRef = useRef(true); // track if user is scrolled near bottom
   const [chatPartner, setChatPartner] = useState<any | null>(null);
   
   // Call States
@@ -32,6 +34,15 @@ export const ChatPage: React.FC = () => {
   const [incomingCall, setIncomingCall] = useState<any>(null);
   const [activeCall, setActiveCall] = useState<{ channelName: string; partnerName: string; partnerAvatar?: string; callType: 'audio' | 'video'; token?: string | null; isCaller: boolean; partnerId: string } | null>(null);
   
+  // Voice Recording States
+  const [isRecording, setIsRecording] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const shouldSendRef = useRef(false);
+
   // File Upload / Attachment States
   const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
   const [activeUploadType, setActiveUploadType] = useState<'pdf' | 'excel' | 'legal' | 'image' | null>(null);
@@ -171,6 +182,141 @@ export const ChatPage: React.FC = () => {
     setIsSendingMedia(false);
     closePreviewModal();
   };
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const options = { mimeType: 'audio/webm;codecs=opus' };
+      let mediaRecorder: MediaRecorder;
+      try {
+        mediaRecorder = new MediaRecorder(stream, options);
+      } catch (e) {
+        mediaRecorder = new MediaRecorder(stream);
+      }
+
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = async () => {
+        stream.getTracks().forEach((track) => track.stop());
+
+        if (shouldSendRef.current && audioChunksRef.current.length > 0) {
+          const audioBlob = new Blob(audioChunksRef.current, { type: mediaRecorder.mimeType || 'audio/webm' });
+          const filename = `voice-note-${Date.now()}.webm`;
+          const audioFile = new File([audioBlob], filename, { type: audioBlob.type });
+          await uploadVoiceNoteAndSend(audioFile);
+        }
+        audioChunksRef.current = [];
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+      setIsPaused(false);
+      setRecordingTime(0);
+
+      timerRef.current = setInterval(() => {
+        setRecordingTime((prev) => prev + 1);
+      }, 1000);
+    } catch (err) {
+      console.error('Failed to start recording:', err);
+      toast.error('Could not access microphone for recording.');
+    }
+  };
+
+  const pauseRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      mediaRecorderRef.current.pause();
+      setIsPaused(true);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    }
+  };
+
+  const resumeRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'paused') {
+      mediaRecorderRef.current.resume();
+      setIsPaused(false);
+      timerRef.current = setInterval(() => {
+        setRecordingTime((prev) => prev + 1);
+      }, 1000);
+    }
+  };
+
+  const stopRecording = (send: boolean) => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      shouldSendRef.current = send;
+      mediaRecorderRef.current.stop();
+    }
+    setIsRecording(false);
+    setIsPaused(false);
+  };
+
+  const uploadVoiceNoteAndSend = async (file: File) => {
+    try {
+      const formData = new FormData();
+      formData.append('document', file);
+
+      const uploadRes = await api.post('/documents/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+      const docData = uploadRes.data;
+
+      const attachmentPayload = {
+        attachment: true,
+        fileType: 'voice',
+        fileName: 'Voice Note',
+        fileUrl: docData.url,
+        fileSize: docData.size,
+      };
+
+      const sendRes = await api.post('/chat/send', {
+        receiverId: userId,
+        content: JSON.stringify(attachmentPayload),
+      });
+
+      const sentMsg = {
+        id: sendRes.data._id || sendRes.data.id,
+        senderId: sendRes.data.senderId,
+        receiverId: sendRes.data.receiverId,
+        content: sendRes.data.content,
+        timestamp: sendRes.data.createdAt || sendRes.data.timestamp,
+        isRead: sendRes.data.isRead,
+        isEdited: sendRes.data.isEdited || false,
+      };
+
+      setMessages((prev) => [...prev, sentMsg]);
+      fetchConversations();
+    } catch (err) {
+      console.error('Error sending voice note:', err);
+      toast.error('Failed to send voice note.');
+    }
+  };
+
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const secs = (seconds % 60).toString().padStart(2, '0');
+    return `${mins}:${secs}`;
+  };
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, []);
   
   // Load active conversations list
   const fetchConversations = async () => {
@@ -257,9 +403,21 @@ export const ChatPage: React.FC = () => {
     }
   }, [currentUser, userId]);
   
+  // Smart auto-scroll: only scroll to bottom if user is already near the bottom
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (isAtBottomRef.current) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
   }, [messages]);
+
+  // Track scroll position to decide if user has scrolled up
+  const handleMessagesScroll = () => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+    const threshold = 120; // px from bottom
+    const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+    isAtBottomRef.current = distanceFromBottom <= threshold;
+  };
   
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -282,6 +440,8 @@ export const ChatPage: React.FC = () => {
         isEdited: res.data.isEdited || false
       };
 
+      // Always scroll to bottom when YOU send a message
+      isAtBottomRef.current = true;
       setMessages(prev => [...prev, sentMsg]);
       setNewMessage('');
       fetchConversations();
@@ -595,7 +755,11 @@ export const ChatPage: React.FC = () => {
               </div>
               
               {/* Messages container */}
-              <div className="flex-1 p-4 overflow-y-auto bg-gray-50/50">
+              <div
+                ref={messagesContainerRef}
+                onScroll={handleMessagesScroll}
+                className="flex-1 p-4 overflow-y-auto bg-gray-50/50"
+              >
                 {messages.length > 0 ? (
                   <div className="space-y-4">
                     {messages.map(message => (
@@ -634,91 +798,173 @@ export const ChatPage: React.FC = () => {
                   className="hidden"
                 />
 
-                <form onSubmit={handleSendMessage} className="flex space-x-2 items-center">
-                  <div className="relative" ref={attachmentMenuRef}>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className={`rounded-full p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 ${showAttachmentMenu ? 'bg-gray-100 text-primary-600' : ''}`}
-                      onClick={() => setShowAttachmentMenu(!showAttachmentMenu)}
-                      aria-label="Attach file"
-                    >
-                      <Paperclip size={20} className={showAttachmentMenu ? 'text-primary-600 rotate-45 transition-transform duration-200' : 'transition-transform duration-200'} />
-                    </Button>
+                <form onSubmit={handleSendMessage} className="flex space-x-2 items-center w-full">
+                  {isRecording ? (
+                    <div className="flex-1 flex items-center justify-between bg-red-50 border border-red-200 rounded-full px-5 py-2 shadow-inner transition-all duration-300">
+                      <div className="flex items-center space-x-3">
+                        {isPaused ? (
+                          <div className="flex items-center space-x-2">
+                            <span className="h-3 w-3 rounded-full bg-gray-400"></span>
+                            <span className="text-sm font-semibold text-gray-500">
+                              Recording Paused
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center space-x-2">
+                            <span className="relative flex h-3 w-3">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                            </span>
+                            <span className="text-sm font-semibold text-red-600 animate-pulse">
+                              Recording Voice Note...
+                            </span>
+                          </div>
+                        )}
+                        <span className="text-sm font-bold text-gray-700 bg-white px-2 py-0.5 rounded border border-gray-150 shadow-sm font-mono">
+                          {formatTime(recordingTime)}
+                        </span>
+                      </div>
+                      
+                      <div className="flex items-center space-x-3">
+                        {/* Pause / Resume Button */}
+                        {isPaused ? (
+                          <button
+                            type="button"
+                            onClick={resumeRecording}
+                            className="rounded-full flex items-center justify-center h-[36px] w-[36px] bg-white hover:bg-primary-50 text-primary-600 border border-gray-200 shadow-sm transition-all focus:outline-none"
+                            title="Resume Recording"
+                          >
+                            <Play size={18} className="fill-current text-primary-600 ml-0.5" />
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={pauseRecording}
+                            className="rounded-full flex items-center justify-center h-[36px] w-[36px] bg-white hover:bg-gray-100 text-gray-600 border border-gray-200 shadow-sm transition-all focus:outline-none"
+                            title="Pause Recording"
+                          >
+                            <Pause size={18} className="text-gray-600" />
+                          </button>
+                        )}
 
-                    {/* Dropdown Menu */}
-                    {showAttachmentMenu && (
-                      <div className="absolute bottom-full left-0 mb-3 bg-white rounded-xl shadow-xl border border-gray-100 py-2 w-64 z-50 origin-bottom-left transition-all">
-                        <div className="px-4 py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                          Send Attachment
-                        </div>
+                        {/* Discard Button */}
+                        <button
+                          type="button"
+                          onClick={() => stopRecording(false)}
+                          className="rounded-full flex items-center justify-center h-[36px] w-[36px] bg-white hover:bg-red-50 text-gray-500 hover:text-red-600 border border-gray-200 shadow-sm transition-all focus:outline-none"
+                          title="Discard Recording"
+                        >
+                          <Trash2 size={18} className="transition-colors" />
+                        </button>
                         
+                        {/* Send Button */}
                         <button
                           type="button"
-                          onClick={() => triggerFileInput('pdf')}
-                          className="w-full flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors"
+                          onClick={() => stopRecording(true)}
+                          className="rounded-full flex items-center justify-center h-[36px] w-[36px] bg-primary-600 hover:bg-primary-700 text-white shadow-md transition-all focus:outline-none"
+                          title="Send Voice Note"
                         >
-                          <span className="p-2 bg-red-50 text-red-600 rounded-lg mr-3 flex items-center justify-center">
-                            <FileText size={16} />
-                          </span>
-                          Pitch Deck (PDF/PPT)
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => triggerFileInput('excel')}
-                          className="w-full flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-green-50 hover:text-green-600 transition-colors"
-                        >
-                          <span className="p-2 bg-green-50 text-green-600 rounded-lg mr-3 flex items-center justify-center">
-                            <FileSpreadsheet size={16} />
-                          </span>
-                          Financial Model (Excel)
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => triggerFileInput('legal')}
-                          className="w-full flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
-                        >
-                          <span className="p-2 bg-blue-50 text-blue-600 rounded-lg mr-3 flex items-center justify-center">
-                            <Scale size={16} />
-                          </span>
-                          Legal / NDA (DOC/PDF)
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => triggerFileInput('image')}
-                          className="w-full flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-600 transition-colors"
-                        >
-                          <span className="p-2 bg-purple-50 text-purple-600 rounded-lg mr-3 flex items-center justify-center">
-                            <ImageIcon size={16} />
-                          </span>
-                          Product Image / Video
+                          <Send size={16} className="text-white ml-0.5" />
                         </button>
                       </div>
-                    )}
-                  </div>
-                  
-                  <Input
-                    type="text"
-                    placeholder="Type a message..."
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    fullWidth
-                    className="flex-1"
-                  />
-                  
-                  <Button
-                    type="submit"
-                    size="sm"
-                    disabled={!newMessage.trim()}
-                    className="rounded-full p-2 w-10 h-10 flex items-center justify-center"
-                    aria-label="Send message"
-                  >
-                    <Send size={18} />
-                  </Button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="relative" ref={attachmentMenuRef}>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className={`rounded-full p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 ${showAttachmentMenu ? 'bg-gray-100 text-primary-600' : ''}`}
+                          onClick={() => setShowAttachmentMenu(!showAttachmentMenu)}
+                          aria-label="Attach file"
+                        >
+                          <Paperclip size={20} className={showAttachmentMenu ? 'text-primary-600 rotate-45 transition-transform duration-200' : 'transition-transform duration-200'} />
+                        </Button>
+
+                        {/* Dropdown Menu */}
+                        {showAttachmentMenu && (
+                          <div className="absolute bottom-full left-0 mb-3 bg-white rounded-xl shadow-xl border border-gray-100 py-2 w-64 z-50 origin-bottom-left transition-all">
+                            <div className="px-4 py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                              Send Attachment
+                            </div>
+                            
+                            <button
+                              type="button"
+                              onClick={() => triggerFileInput('pdf')}
+                              className="w-full flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors"
+                            >
+                              <span className="p-2 bg-red-50 text-red-600 rounded-lg mr-3 flex items-center justify-center">
+                                <FileText size={16} />
+                              </span>
+                              Pitch Deck (PDF/PPT)
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => triggerFileInput('excel')}
+                              className="w-full flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-green-50 hover:text-green-600 transition-colors"
+                            >
+                              <span className="p-2 bg-green-50 text-green-600 rounded-lg mr-3 flex items-center justify-center">
+                                <FileSpreadsheet size={16} />
+                              </span>
+                              Financial Model (Excel)
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => triggerFileInput('legal')}
+                              className="w-full flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                            >
+                              <span className="p-2 bg-blue-50 text-blue-600 rounded-lg mr-3 flex items-center justify-center">
+                                <Scale size={16} />
+                              </span>
+                              Legal / NDA (DOC/PDF)
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => triggerFileInput('image')}
+                              className="w-full flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-600 transition-colors"
+                            >
+                              <span className="p-2 bg-purple-50 text-purple-600 rounded-lg mr-3 flex items-center justify-center">
+                                <ImageIcon size={16} />
+                              </span>
+                              Product Image / Video
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <Input
+                        type="text"
+                        placeholder="Type a message..."
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        fullWidth
+                        className="flex-1"
+                      />
+                      
+                      {newMessage.trim() ? (
+                        <button
+                          type="submit"
+                          className="rounded-full w-[44px] h-[44px] flex items-center justify-center bg-primary-600 hover:bg-primary-700 text-white transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500/60 flex-shrink-0 shadow-md"
+                          aria-label="Send message"
+                        >
+                          <Send size={20} className="text-white ml-0.5" />
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={startRecording}
+                          className="rounded-full w-[44px] h-[44px] flex items-center justify-center bg-gray-50 hover:bg-primary-50 text-gray-500 hover:text-primary-600 border border-gray-300 hover:border-primary-300 transition-all focus:outline-none focus:ring-2 focus:ring-primary-500/60 flex-shrink-0 shadow-sm"
+                          aria-label="Record voice note"
+                        >
+                          <Mic size={24} className="text-primary-600" />
+                        </button>
+                      )}
+                    </>
+                  )}
                 </form>
               </div>
             </>

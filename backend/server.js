@@ -13,6 +13,7 @@ import meetingRoutes from './routes/meetings.js';
 import documentRoutes from './routes/documents.js';
 import paymentRoutes from './routes/payments.js';
 import chatRoutes from './routes/chat.js';
+import notificationRoutes from './routes/notifications.js';
 
 dotenv.config();
 
@@ -27,6 +28,9 @@ const io = new Server(server, {
     credentials: true
   }
 });
+
+// Make `io` accessible in route handlers via req.app.get('io')
+app.set('io', io);
 
 // Middlewares
 app.use(cors({
@@ -47,6 +51,7 @@ app.use('/api/meetings', meetingRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Root route for health check
 app.get('/', (req, res) => {
@@ -65,12 +70,15 @@ app.use((err, req, res, next) => {
 io.on('connection', (socket) => {
   console.log('Socket client connected:', socket.id);
 
-  // Chat Calling Signaling
+  // ── User Registration ──────────────────────────────────────────────────────
+  // Each logged-in user joins a private room = their userId
+  // so we can push targeted events (notifications, calls, etc.)
   socket.on('register-user', (userId) => {
     socket.join(userId);
     console.log(`User ${userId} registered for private socket events`);
   });
 
+  // ── Video / Audio Call Signaling ───────────────────────────────────────────
   socket.on('call-user', ({ userToCall, from, callerName, callerAvatar, callType, channelName }) => {
     socket.to(userToCall).emit('incoming-call', { 
       from, 
@@ -93,7 +101,7 @@ io.on('connection', (socket) => {
     socket.to(to).emit('call-ended');
   });
 
-
+  // ── WebRTC Room ────────────────────────────────────────────────────────────
   socket.on('join-room', ({ roomId, userId }) => {
     socket.join(roomId);
     console.log(`User ${userId} joined WebRTC room ${roomId}`);

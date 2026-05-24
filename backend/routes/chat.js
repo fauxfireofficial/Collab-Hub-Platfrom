@@ -2,6 +2,7 @@ import express from 'express';
 import Message from '../models/Message.js';
 import User from '../models/User.js';
 import { auth } from '../middleware/auth.js';
+import { createNotification } from './notifications.js';
 import pkg from 'agora-token';
 const { RtcTokenBuilder, RtcRole } = pkg;
 
@@ -64,7 +65,7 @@ router.get('/history/:userId', auth, async (req, res) => {
 });
 
 // @route   POST /api/chat/send
-// @desc    Save a direct message
+// @desc    Save a direct message + push real-time notification to receiver
 router.post('/send', auth, async (req, res) => {
   const { receiverId, content } = req.body;
   if (!content) {
@@ -85,6 +86,25 @@ router.post('/send', auth, async (req, res) => {
     });
 
     await message.save();
+
+    // ── Real-time notification ──────────────────────────────────────────────
+    const io = req.app.get('io');
+    const senderName = req.user.name || 'Someone';
+
+    // Determine a preview (truncate long messages)
+    const preview = content.startsWith('{"attachment":')
+      ? 'sent you an attachment'
+      : content.length > 60 ? content.slice(0, 60) + '…' : content;
+
+    await createNotification(io, {
+      recipientId: receiverId,
+      senderId:    req.user.id,
+      type:        'message',
+      content:     `${senderName} sent you a message: "${preview}"`,
+      link:        `/chat/${req.user.id}`
+    });
+    // ───────────────────────────────────────────────────────────────────────
+
     res.status(201).json(message);
   } catch (error) {
     console.error('Send message error:', error);

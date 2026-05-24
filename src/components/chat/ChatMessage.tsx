@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { Message } from '../../types';
 import { Avatar } from '../ui/Avatar';
-import { FileText, FileSpreadsheet, Download, Scale, ChevronDown, Edit2, Trash2, Check, X, Play, Video as VideoIcon } from 'lucide-react';
+import { FileText, FileSpreadsheet, Download, Scale, ChevronDown, Edit2, Trash2, Check, X, Play, Pause, Mic, Video as VideoIcon } from 'lucide-react';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -41,6 +41,127 @@ const formatMediaName = (
       downloadName: `${prefix}.${ext}`
     };
   }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Voice Note Player Component
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface VoicePlayerProps {
+  url: string;
+  isCurrentUser: boolean;
+}
+
+const VoicePlayer: React.FC<VoicePlayerProps> = ({ url, isCurrentUser }) => {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    const audio = new Audio(url);
+    audioRef.current = audio;
+
+    const onLoadedMetadata = () => {
+      setDuration(audio.duration);
+    };
+
+    const onTimeUpdate = () => {
+      setCurrentTime(audio.currentTime);
+    };
+
+    const onEnded = () => {
+      setIsPlaying(false);
+      setCurrentTime(0);
+    };
+
+    audio.addEventListener('loadedmetadata', onLoadedMetadata);
+    audio.addEventListener('timeupdate', onTimeUpdate);
+    audio.addEventListener('ended', onEnded);
+
+    return () => {
+      audio.pause();
+      audio.removeEventListener('loadedmetadata', onLoadedMetadata);
+      audio.removeEventListener('timeupdate', onTimeUpdate);
+      audio.removeEventListener('ended', onEnded);
+      audioRef.current = null;
+    };
+  }, [url]);
+
+  const togglePlay = () => {
+    if (!audioRef.current) return;
+    if (isPlaying) {
+      audioRef.current.pause();
+      setIsPlaying(false);
+    } else {
+      audioRef.current.play().catch((err) => console.error('Audio play failed:', err));
+      setIsPlaying(true);
+    }
+  };
+
+  const handleProgressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!audioRef.current) return;
+    const newTime = parseFloat(e.target.value);
+    audioRef.current.currentTime = newTime;
+    setCurrentTime(newTime);
+  };
+
+  const formatPlaybackTime = (time: number) => {
+    if (isNaN(time)) return '0:00';
+    const mins = Math.floor(time / 60);
+    const secs = Math.floor(time % 60).toString().padStart(2, '0');
+    return `${mins}:${secs}`;
+  };
+
+  return (
+    <div className={`flex items-center space-x-3 p-3.5 border rounded-2xl max-w-xs sm:max-w-sm text-gray-800 shadow-sm transition-all ${
+      isCurrentUser 
+        ? 'bg-primary-50 border-primary-100 hover:bg-primary-100/50' 
+        : 'bg-white border-gray-200 hover:bg-gray-50'
+    }`}>
+      {/* Play/Pause Button */}
+      <button
+        type="button"
+        onClick={togglePlay}
+        className={`w-11 h-11 rounded-full flex items-center justify-center transition-all ${
+          isCurrentUser 
+            ? 'bg-primary-600 hover:bg-primary-700 text-white shadow-sm' 
+            : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+        }`}
+      >
+        {isPlaying ? (
+          <Pause size={16} fill="currentColor" />
+        ) : (
+          <Play size={16} fill="currentColor" className="ml-0.5" />
+        )}
+      </button>
+
+      {/* Seekbar and metadata */}
+      <div className="flex-1 min-w-0 flex flex-col justify-center">
+        <div className="flex items-center">
+          <input
+            type="range"
+            min="0"
+            max={duration || 100}
+            value={currentTime}
+            onChange={handleProgressChange}
+            className={`w-full h-1 rounded-lg appearance-none cursor-pointer focus:outline-none accent-primary-600 ${
+              isCurrentUser ? 'bg-primary-200' : 'bg-gray-200'
+            }`}
+          />
+        </div>
+        <div className="flex justify-between items-center mt-1.5 select-none">
+          <span className="text-[10px] text-gray-500 font-semibold font-mono">
+            {formatPlaybackTime(currentTime)} / {formatPlaybackTime(duration)}
+          </span>
+          <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider flex items-center gap-1">
+            <Mic size={10} className="text-gray-400" />
+            Voice Note
+          </span>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -165,6 +286,13 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
     const fileUrl = attachmentData.fileUrl;
     const fullFileUrl = fileUrl.startsWith('http') ? fileUrl : `http://localhost:5000${fileUrl}`;
     const caption: string | undefined = attachmentData.caption;
+
+    // ── Voice Note ─────────────────────────────────────────────────────────
+    if (attachmentData.fileType === 'voice') {
+      return (
+        <VoicePlayer url={fullFileUrl} isCurrentUser={isCurrentUser} />
+      );
+    }
 
     // ── Image ──────────────────────────────────────────────────────────────
     if (isImage) {
