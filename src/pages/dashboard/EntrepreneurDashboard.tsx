@@ -7,11 +7,13 @@ import { Badge } from '../../components/ui/Badge';
 import { CollaborationRequestCard } from '../../components/collaboration/CollaborationRequestCard';
 import { InvestorCard } from '../../components/investor/InvestorCard';
 import { useAuth } from '../../context/AuthContext';
+import { useTranslation } from 'react-i18next';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 
 export const EntrepreneurDashboard: React.FC = () => {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const [collaborationRequests, setCollaborationRequests] = useState<any[]>([]);
   const [recommendedInvestors, setRecommendedInvestors] = useState<any[]>([]);
   const [meetingsCount, setMeetingsCount] = useState(0);
@@ -61,15 +63,15 @@ export const EntrepreneurDashboard: React.FC = () => {
     <div className="space-y-6 animate-fade-in">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Welcome, {user.name}</h1>
-          <p className="text-gray-600">Here's what's happening with your startup today</p>
+          <h1 className="text-2xl font-bold text-gray-900">{t('Welcome, {{name}}', { name: user.name })}</h1>
+          <p className="text-gray-600">{t("Here's what's happening with your startup today")}</p>
         </div>
         
         <Link to="/investors">
           <Button
             leftIcon={<PlusCircle size={18} />}
           >
-            Find Investors
+            {t('Find Investors')}
           </Button>
         </Link>
       </div>
@@ -83,7 +85,7 @@ export const EntrepreneurDashboard: React.FC = () => {
                 <Bell size={20} className="text-primary-700" />
               </div>
               <div>
-                <p className="text-sm font-medium text-primary-700">Pending Requests</p>
+                <p className="text-sm font-medium text-primary-700">{t('Pending Requests')}</p>
                 <h3 className="text-xl font-semibold text-primary-900">{pendingRequests.length}</h3>
               </div>
             </div>
@@ -97,7 +99,7 @@ export const EntrepreneurDashboard: React.FC = () => {
                 <Users size={20} className="text-secondary-700" />
               </div>
               <div>
-                <p className="text-sm font-medium text-secondary-700">Total Connections</p>
+                <p className="text-sm font-medium text-secondary-700">{t('Total Connections')}</p>
                 <h3 className="text-xl font-semibold text-primary-900">
                   {collaborationRequests.filter(req => req.status === 'accepted').length}
                 </h3>
@@ -113,7 +115,7 @@ export const EntrepreneurDashboard: React.FC = () => {
                 <Calendar size={20} className="text-accent-700" />
               </div>
               <div>
-                <p className="text-sm font-medium text-accent-700">Upcoming Meetings</p>
+                <p className="text-sm font-medium text-accent-700">{t('Upcoming Meetings')}</p>
                 <h3 className="text-xl font-semibold text-accent-900">{meetingsCount}</h3>
               </div>
             </div>
@@ -127,7 +129,7 @@ export const EntrepreneurDashboard: React.FC = () => {
                 <TrendingUp size={20} className="text-success-700" />
               </div>
               <div>
-                <p className="text-sm font-medium text-success-700">Profile Views</p>
+                <p className="text-sm font-medium text-success-700">{t('Profile Views')}</p>
                 <h3 className="text-xl font-semibold text-success-900">24</h3>
               </div>
             </div>
@@ -140,8 +142,8 @@ export const EntrepreneurDashboard: React.FC = () => {
         <div className="lg:col-span-2 space-y-4">
           <Card>
             <CardHeader className="flex justify-between items-center">
-              <h2 className="text-lg font-medium text-gray-900">Collaboration Requests</h2>
-              <Badge variant="primary">{pendingRequests.length} pending</Badge>
+              <h2 className="text-lg font-medium text-gray-900">{t('Collaboration Requests')}</h2>
+              <Badge variant="primary">{pendingRequests.length} {t('pending')}</Badge>
             </CardHeader>
             
             <CardBody>
@@ -160,8 +162,8 @@ export const EntrepreneurDashboard: React.FC = () => {
                   <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
                     <AlertCircle size={24} className="text-gray-500" />
                   </div>
-                  <p className="text-gray-600">No collaboration requests yet</p>
-                  <p className="text-sm text-gray-500 mt-1">When investors are interested in your startup, their requests will appear here</p>
+                  <p className="text-gray-600">{t('No collaboration requests yet')}</p>
+                  <p className="text-sm text-gray-500 mt-1">{t('When investors are interested in your startup, their requests will appear here')}</p>
                 </div>
               )}
             </CardBody>
@@ -172,9 +174,9 @@ export const EntrepreneurDashboard: React.FC = () => {
         <div className="space-y-4">
           <Card>
             <CardHeader className="flex justify-between items-center">
-              <h2 className="text-lg font-medium text-gray-900">Recommended Investors</h2>
+              <h2 className="text-lg font-medium text-gray-900">{t('Recommended Investors')}</h2>
               <Link to="/investors" className="text-sm font-medium text-primary-600 hover:text-primary-500">
-                View all
+                {t('View all')}
               </Link>
             </CardHeader>
             

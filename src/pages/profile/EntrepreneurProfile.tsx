@@ -9,10 +9,14 @@ import { Input } from '../../components/ui/Input';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
+import { useLocale } from '../../context/LocaleContext';
+import { useTranslation } from 'react-i18next';
 
 export const EntrepreneurProfile: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { user: currentUser, updateProfile } = useAuth();
+  const { formatStringCurrency } = useLocale();
+  const { t } = useTranslation();
   const [entrepreneur, setEntrepreneur] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [hasRequestedCollaboration, setHasRequestedCollaboration] = useState(false);
@@ -501,26 +505,31 @@ export const EntrepreneurProfile: React.FC = () => {
           {/* Funding Details */}
           <Card>
             <CardHeader>
-              <h2 className="text-lg font-medium text-gray-900">Funding</h2>
+              <h2 className="text-lg font-medium text-gray-900">{t('Funding')}</h2>
             </CardHeader>
             <CardBody>
               <div className="space-y-4">
                 <div>
-                  <span className="text-sm text-gray-500">Current Round Goal</span>
+                  <span className="text-sm text-gray-500">{t('Current Round Goal')}</span>
                   <div className="flex items-center mt-1">
-                    <DollarSign size={18} className="text-accent-600 mr-1" />
-                    <p className="text-lg font-semibold text-gray-900">{entrepreneur.fundingNeeded || 'Undisclosed'}</p>
+                    <p className="text-lg font-semibold text-gray-900">
+                      {entrepreneur.fundingNeeded ? formatStringCurrency(entrepreneur.fundingNeeded) : t('Undisclosed')}
+                    </p>
                   </div>
                 </div>
                 
                 <div>
-                  <span className="text-sm text-gray-500">Valuation Range</span>
-                  <p className="text-md font-medium text-gray-900">$8M - $12M</p>
+                  <span className="text-sm text-gray-500">{t('Valuation Range')}</span>
+                  <p className="text-md font-medium text-gray-900">
+                    {formatStringCurrency('$8M')} - {formatStringCurrency('$12M')}
+                  </p>
                 </div>
                 
                 <div>
-                  <span className="text-sm text-gray-500">Previous Funding</span>
-                  <p className="text-md font-medium text-gray-900">$750K Seed (2022)</p>
+                  <span className="text-sm text-gray-500">{t('Previous Funding')}</span>
+                  <p className="text-md font-medium text-gray-900">
+                    {formatStringCurrency('$750K')} {t('Seed')} (2022)
+                  </p>
                 </div>
               </div>
             </CardBody>

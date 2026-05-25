@@ -7,6 +7,8 @@ import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
+import { useLocale } from '../../context/LocaleContext';
+import { useTranslation } from 'react-i18next';
 
 interface Transaction {
   id: string;
@@ -35,6 +37,8 @@ interface ConnectionUser {
 
 export const PaymentsPage: React.FC = () => {
   const { user } = useAuth();
+  const { t } = useTranslation();
+  const { formatLocalCurrency, formatLocalDate, currency, exchangeRate } = useLocale();
   const [balance, setBalance] = useState(user?.walletBalance || 0);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [partners, setPartners] = useState<ConnectionUser[]>([]);
@@ -87,9 +91,10 @@ export const PaymentsPage: React.FC = () => {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      const response = await api.post('/payments/deposit', { amount: parseFloat(amount) });
+      const amountInUSD = parseFloat(amount) / exchangeRate;
+      const response = await api.post('/payments/deposit', { amount: amountInUSD });
       setBalance(response.data.balance);
-      toast.success(`Successfully deposited $${amount} via Stripe Sandbox!`);
+      toast.success(`Successfully deposited ${formatLocalCurrency(parseFloat(amount))} via Stripe Sandbox!`);
       setActiveModal('none');
       setAmount('');
       fetchHistory();
@@ -104,9 +109,10 @@ export const PaymentsPage: React.FC = () => {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      const response = await api.post('/payments/withdraw', { amount: parseFloat(amount) });
+      const amountInUSD = parseFloat(amount) / exchangeRate;
+      const response = await api.post('/payments/withdraw', { amount: amountInUSD });
       setBalance(response.data.balance);
-      toast.success(`Withdrawal of $${amount} requested. Funds are being sent to your bank.`);
+      toast.success(`Withdrawal of ${formatLocalCurrency(parseFloat(amount))} requested. Funds are being sent to your bank.`);
       setActiveModal('none');
       setAmount('');
       fetchHistory();
@@ -121,12 +127,13 @@ export const PaymentsPage: React.FC = () => {
     e.preventDefault();
     setIsSubmitting(true);
     try {
+      const amountInUSD = parseFloat(amount) / exchangeRate;
       const response = await api.post('/payments/transfer', { 
         recipientId, 
-        amount: parseFloat(amount) 
+        amount: amountInUSD 
       });
       setBalance(response.data.balance);
-      toast.success(`Successfully invested $${amount} into startup!`);
+      toast.success(`Successfully invested ${formatLocalCurrency(parseFloat(amount))} into startup!`);
       setActiveModal('none');
       setAmount('');
       setRecipientId('');
@@ -164,7 +171,7 @@ export const PaymentsPage: React.FC = () => {
             <div className="my-2 z-10">
               <span className="text-xs uppercase opacity-75 font-semibold">Available Balance</span>
               <h2 className="text-3xl font-bold tracking-tight mt-1">
-                ${balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                {formatLocalCurrency(balance)}
               </h2>
             </div>
 
@@ -254,17 +261,17 @@ export const PaymentsPage: React.FC = () => {
 
                         return (
                           <tr key={tx.id} className="hover:bg-gray-50 transition-colors">
-                            <td className="px-6 py-4 whitespace-nowrap text-gray-500">
-                              {format(new Date(tx.createdAt), 'PPp')}
+                            <td className="px-6 py-4 whitespace-nowrap text-gray-500 dark:text-gray-400">
+                              {formatLocalDate(new Date(tx.createdAt))}
                             </td>
-                            <td className="px-6 py-4 font-medium text-gray-900">
+                            <td className="px-6 py-4 font-medium text-gray-900 dark:text-gray-100">
                               {description}
                             </td>
-                            <td className="px-6 py-4 capitalize text-gray-500">
+                            <td className="px-6 py-4 capitalize text-gray-500 dark:text-gray-400">
                               {tx.type}
                             </td>
                             <td className={`px-6 py-4 font-semibold ${isIncome ? 'text-success-600' : 'text-error-600'}`}>
-                              {isIncome ? '+' : '-'}${tx.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                              {isIncome ? '+' : '-'}{formatLocalCurrency(tx.amount)}
                             </td>
                             <td className="px-6 py-4">
                               <span className="px-2 py-1 text-xs font-semibold rounded-full bg-success-50 text-success-700">
@@ -310,10 +317,10 @@ export const PaymentsPage: React.FC = () => {
                 </div>
 
                 <Input
-                  label="Amount to Deposit ($)"
+                  label={`Amount to Deposit (${currency})`}
                   type="number"
-                  placeholder="e.g. 100"
-                  min="5"
+                  placeholder={`e.g. ${Math.ceil(100 * exchangeRate)}`}
+                  min={Math.ceil(5 * exchangeRate)}
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   required
@@ -373,10 +380,10 @@ export const PaymentsPage: React.FC = () => {
             <CardBody className="p-6">
               <form onSubmit={handleWithdraw} className="space-y-4">
                 <Input
-                  label="Amount to Withdraw ($)"
+                  label={`Amount to Withdraw (${currency})`}
                   type="number"
-                  placeholder="e.g. 50"
-                  max={balance}
+                  placeholder={`e.g. ${Math.ceil(50 * exchangeRate)}`}
+                  max={balance * exchangeRate}
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   required
@@ -438,10 +445,10 @@ export const PaymentsPage: React.FC = () => {
                 </div>
 
                 <Input
-                  label="Amount to Transfer ($)"
+                  label={`Amount to Transfer (${currency})`}
                   type="number"
-                  placeholder="e.g. 5000"
-                  max={balance}
+                  placeholder={`e.g. ${Math.ceil(5000 * exchangeRate)}`}
+                  max={balance * exchangeRate}
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   required

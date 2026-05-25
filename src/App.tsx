@@ -2,6 +2,9 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { useAuth } from './context/AuthContext';
 import { AuthProvider } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
+import { ThemeProvider } from './context/ThemeContext';
+import { LocaleProvider } from './context/LocaleContext';
+import './i18n';
 
 // Layouts
 import { DashboardLayout } from './components/layout/DashboardLayout';
@@ -45,9 +48,11 @@ const RootRedirect = () => {
 
 function App() {
   return (
-    <AuthProvider>
-      <NotificationProvider>
-        <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+    <ThemeProvider>
+      <LocaleProvider>
+        <AuthProvider>
+          <NotificationProvider>
+            <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <Routes>
           {/* Authentication Routes */}
           <Route path="/login" element={<LoginPage />} />
@@ -128,6 +133,8 @@ function App() {
         </Router>
       </NotificationProvider>
     </AuthProvider>
+    </LocaleProvider>
+    </ThemeProvider>
   );
 }
 

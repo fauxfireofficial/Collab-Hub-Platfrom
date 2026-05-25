@@ -9,10 +9,14 @@ import { Input } from '../../components/ui/Input';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
+import { useLocale } from '../../context/LocaleContext';
+import { useTranslation } from 'react-i18next';
 
 export const InvestorProfile: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { user: currentUser, updateProfile } = useAuth();
+  const { formatStringCurrency } = useLocale();
+  const { t } = useTranslation();
   const [investor, setInvestor] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -451,16 +455,16 @@ export const InvestorProfile: React.FC = () => {
           {/* Investment Preferences */}
           <Card>
             <CardHeader>
-              <h2 className="text-lg font-medium text-gray-900">Investment Preferences</h2>
+              <h2 className="text-lg font-medium text-gray-900">{t('Investment Preferences')}</h2>
             </CardHeader>
             <CardBody>
               <div className="space-y-4">
                 <div>
                   <span className="text-sm text-gray-500 flex items-center">
-                    <DollarSign size={16} className="mr-1 text-gray-400" /> Range
+                    Range
                   </span>
                   <p className="text-lg font-semibold text-gray-900 mt-1">
-                    {investor.minimumInvestment || 'N/A'} - {investor.maximumInvestment || 'N/A'}
+                    {investor.minimumInvestment ? formatStringCurrency(investor.minimumInvestment) : 'N/A'} - {investor.maximumInvestment ? formatStringCurrency(investor.maximumInvestment) : 'N/A'}
                   </p>
                 </div>
                 

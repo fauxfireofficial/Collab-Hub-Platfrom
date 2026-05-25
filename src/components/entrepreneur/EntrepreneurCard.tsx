@@ -6,6 +6,7 @@ import { Card, CardBody, CardFooter } from '../ui/Card';
 import { Avatar } from '../ui/Avatar';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
+import { useLocale } from '../../context/LocaleContext';
 
 interface EntrepreneurCardProps {
   entrepreneur: Entrepreneur;
@@ -17,6 +18,7 @@ export const EntrepreneurCard: React.FC<EntrepreneurCardProps> = ({
   showActions = true
 }) => {
   const navigate = useNavigate();
+  const { formatStringCurrency } = useLocale();
   
   const handleViewProfile = () => {
     navigate(`/profile/entrepreneur/${entrepreneur.id}`);
@@ -63,7 +65,7 @@ export const EntrepreneurCard: React.FC<EntrepreneurCardProps> = ({
         <div className="mt-3 flex justify-between items-center">
           <div>
             <span className="text-xs text-gray-500">Funding Need</span>
-            <p className="text-sm font-medium text-gray-900">{entrepreneur.fundingNeeded}</p>
+            <p className="text-sm font-medium text-gray-900">{formatStringCurrency(entrepreneur.fundingNeeded)}</p>
           </div>
           
           <div>

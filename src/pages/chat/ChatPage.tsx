@@ -7,6 +7,7 @@ import { Input } from '../../components/ui/Input';
 import { ChatMessage } from '../../components/chat/ChatMessage';
 import { ChatUserList } from '../../components/chat/ChatUserList';
 import { useAuth } from '../../context/AuthContext';
+import { useTranslation } from 'react-i18next';
 import { Message } from '../../types';
 import api from '../../services/api';
 import { MessageCircle } from 'lucide-react';
@@ -21,6 +22,7 @@ export const ChatPage: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
+  const { t } = useTranslation();
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [conversations, setConversations] = useState<any[]>([]);
@@ -656,7 +658,7 @@ export const ChatPage: React.FC = () => {
                       handleSendMedia();
                     }
                   }}
-                  placeholder="Add a caption..."
+                  placeholder={t('Add a caption...')}
                   disabled={isSendingMedia}
                   className="w-full bg-white/10 border border-white/20 rounded-full px-5 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/60 focus:border-purple-500/60 transition-all disabled:opacity-50"
                   autoFocus
@@ -717,7 +719,7 @@ export const ChatPage: React.FC = () => {
                   <div>
                     <h2 className="text-lg font-medium text-gray-900">{chatPartner.name}</h2>
                     <p className="text-sm text-gray-500">
-                      {chatPartner.isOnline ? 'Online' : 'Offline'}
+                      {chatPartner.isOnline ? t('Online') : t('Offline')}
                     </p>
                   </div>
                 </div>
@@ -782,8 +784,8 @@ export const ChatPage: React.FC = () => {
                     <div className="bg-gray-150 p-4 rounded-full mb-4">
                       <MessageCircle size={32} className="text-gray-400" />
                     </div>
-                    <h3 className="text-lg font-medium text-gray-700">No messages yet</h3>
-                    <p className="text-gray-500 mt-1">Send a message to start the conversation</p>
+                    <h3 className="text-lg font-medium text-gray-700">{t('No messages yet')}</h3>
+                    <p className="text-gray-500 mt-1">{t('Send a message to start the conversation')}</p>
                   </div>
                 )}
               </div>
@@ -806,7 +808,7 @@ export const ChatPage: React.FC = () => {
                           <div className="flex items-center space-x-2">
                             <span className="h-3 w-3 rounded-full bg-gray-400"></span>
                             <span className="text-sm font-semibold text-gray-500">
-                              Recording Paused
+                              {t('Recording Paused')}
                             </span>
                           </div>
                         ) : (
@@ -816,7 +818,7 @@ export const ChatPage: React.FC = () => {
                               <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
                             </span>
                             <span className="text-sm font-semibold text-red-600 animate-pulse">
-                              Recording Voice Note...
+                              {t('Recording Voice Note...')}
                             </span>
                           </div>
                         )}
@@ -886,7 +888,7 @@ export const ChatPage: React.FC = () => {
                         {showAttachmentMenu && (
                           <div className="absolute bottom-full left-0 mb-3 bg-white rounded-xl shadow-xl border border-gray-100 py-2 w-64 z-50 origin-bottom-left transition-all">
                             <div className="px-4 py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                              Send Attachment
+                              {t('Send Attachment')}
                             </div>
                             
                             <button
@@ -897,7 +899,7 @@ export const ChatPage: React.FC = () => {
                               <span className="p-2 bg-red-50 text-red-600 rounded-lg mr-3 flex items-center justify-center">
                                 <FileText size={16} />
                               </span>
-                              Pitch Deck (PDF/PPT)
+                              {t('Pitch Deck (PDF/PPT)')}
                             </button>
 
                             <button
@@ -908,7 +910,7 @@ export const ChatPage: React.FC = () => {
                               <span className="p-2 bg-green-50 text-green-600 rounded-lg mr-3 flex items-center justify-center">
                                 <FileSpreadsheet size={16} />
                               </span>
-                              Financial Model (Excel)
+                              {t('Financial Model (Excel)')}
                             </button>
 
                             <button
@@ -919,7 +921,7 @@ export const ChatPage: React.FC = () => {
                               <span className="p-2 bg-blue-50 text-blue-600 rounded-lg mr-3 flex items-center justify-center">
                                 <Scale size={16} />
                               </span>
-                              Legal / NDA (DOC/PDF)
+                              {t('Legal / NDA (DOC/PDF)')}
                             </button>
 
                             <button
@@ -930,7 +932,7 @@ export const ChatPage: React.FC = () => {
                               <span className="p-2 bg-purple-50 text-purple-600 rounded-lg mr-3 flex items-center justify-center">
                                 <ImageIcon size={16} />
                               </span>
-                              Product Image / Video
+                              {t('Product Image / Video')}
                             </button>
                           </div>
                         )}
@@ -938,7 +940,7 @@ export const ChatPage: React.FC = () => {
                       
                       <Input
                         type="text"
-                        placeholder="Type a message..."
+                        placeholder={t('Type a message...')}
                         value={newMessage}
                         onChange={(e) => setNewMessage(e.target.value)}
                         fullWidth
@@ -973,9 +975,9 @@ export const ChatPage: React.FC = () => {
               <div className="bg-gray-100 p-6 rounded-full mb-4">
                 <MessageCircle size={48} className="text-gray-400" />
               </div>
-              <h2 className="text-xl font-medium text-gray-700">Select a conversation</h2>
+              <h2 className="text-xl font-medium text-gray-700">{t('Select a conversation')}</h2>
               <p className="text-gray-500 mt-2 text-center max-w-xs">
-                Choose a contact from the sidebar or request connection to start a chat.
+                {t('Choose a contact from the sidebar or request connection to start a chat.')}
               </p>
             </div>
           )}
