@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Search, Filter, MapPin } from 'lucide-react';
 import { Input } from '../../components/ui/Input';
 import { Card, CardHeader, CardBody } from '../../components/ui/Card';
@@ -6,6 +7,7 @@ import { EntrepreneurCard } from '../../components/entrepreneur/EntrepreneurCard
 import { entrepreneurs } from '../../data/users';
 
 export const EntrepreneursPage: React.FC = () => {
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIndustries, setSelectedIndustries] = useState<string[]>([]);
   const [selectedFundingRange, setSelectedFundingRange] = useState<string[]>([]);
@@ -60,8 +62,8 @@ export const EntrepreneursPage: React.FC = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Find Startups</h1>
-        <p className="text-gray-600">Discover promising startups looking for investment</p>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('Find Startups')}</h1>
+        <p className="text-gray-600 dark:text-gray-400">{t('Discover promising startups looking for investment')}</p>
       </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -69,11 +71,11 @@ export const EntrepreneursPage: React.FC = () => {
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <h2 className="text-lg font-medium text-gray-900">Filters</h2>
+              <h2 className="text-lg font-medium text-gray-900 dark:text-white">{t('Filters')}</h2>
             </CardHeader>
             <CardBody className="space-y-6">
               <div>
-                <h3 className="text-sm font-medium text-gray-900 mb-2">Industry</h3>
+                <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">{t('Industry')}</h3>
                 <div className="space-y-2">
                   {allIndustries.map(industry => (
                     <button
@@ -92,7 +94,7 @@ export const EntrepreneursPage: React.FC = () => {
               </div>
               
               <div>
-                <h3 className="text-sm font-medium text-gray-900 mb-2">Funding Range</h3>
+                <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">{t('Funding Range')}</h3>
                 <div className="space-y-2">
                   {fundingRanges.map(range => (
                     <button
@@ -111,7 +113,7 @@ export const EntrepreneursPage: React.FC = () => {
               </div>
               
               <div>
-                <h3 className="text-sm font-medium text-gray-900 mb-2">Location</h3>
+                <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">{t('Location')}</h3>
                 <div className="space-y-2">
                   <button className="flex items-center w-full text-left px-3 py-2 rounded-md text-sm text-gray-700 hover:bg-gray-50">
                     <MapPin size={16} className="mr-2" />
@@ -135,7 +137,7 @@ export const EntrepreneursPage: React.FC = () => {
         <div className="lg:col-span-3 space-y-6">
           <div className="flex items-center gap-4">
             <Input
-              placeholder="Search startups by name, industry, or keywords..."
+              placeholder={t('Search startups, industries, or keywords...')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               startAdornment={<Search size={18} />}

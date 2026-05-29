@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FileText, Upload, Download, Trash2, Share2, PenTool, Check, Eye, X } from 'lucide-react';
 import { Card, CardHeader, CardBody } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -23,6 +24,7 @@ interface Document {
 const SERVER_URL = import.meta.env.VITE_API_BASE || 'http://localhost:5000';
 
 export const DocumentsPage: React.FC = () => {
+  const { t } = useTranslation();
   const [documents, setDocuments] = useState<Document[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedDoc, setSelectedDoc] = useState<Document | null>(null);
@@ -217,8 +219,8 @@ export const DocumentsPage: React.FC = () => {
     <div className="space-y-6 animate-fade-in">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Document Processing Chamber</h1>
-          <p className="text-gray-600">Upload agreements, preview PDFs, and apply hand-drawn e-signatures</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('Document Processing Chamber')}</h1>
+          <p className="text-gray-600 dark:text-gray-400">{t('Upload agreements, preview PDFs, and apply hand-drawn e-signatures')}</p>
         </div>
         
         <div>
@@ -234,7 +236,7 @@ export const DocumentsPage: React.FC = () => {
             onClick={handleUploadClick}
             isLoading={isUploading}
           >
-            Upload Document
+            {t('Upload Document')}
           </Button>
         </div>
       </div>
@@ -245,40 +247,40 @@ export const DocumentsPage: React.FC = () => {
         <div className="lg:col-span-3">
           <Card>
             <CardHeader>
-              <h2 className="text-lg font-medium text-gray-900">All Documents</h2>
+              <h2 className="text-lg font-medium text-gray-900 dark:text-white">{t('All Documents')}</h2>
             </CardHeader>
             <CardBody>
               {isLoading ? (
-                <p className="text-center py-8 text-gray-500">Loading documents...</p>
+                <p className="text-center py-8 text-gray-500">{t('Loading documents...')}</p>
               ) : documents.length > 0 ? (
                 <div className="space-y-2">
                   {documents.map(doc => (
                     <div
                       key={doc.id}
                       onClick={() => setSelectedDoc(doc)}
-                      className={`flex items-center p-4 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors duration-200 border border-transparent ${selectedDoc?.id === doc.id ? 'border-primary-300 bg-primary-50/30' : ''}`}
+                      className={`flex items-center p-4 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg cursor-pointer transition-colors duration-200 border border-transparent ${selectedDoc?.id === doc.id ? 'border-primary-300 dark:border-primary-700 bg-primary-50/30 dark:bg-primary-900/30' : ''}`}
                     >
-                      <div className="p-2 bg-primary-50 rounded-lg mr-4">
+                      <div className="p-2 bg-primary-50 dark:bg-primary-900/30 rounded-lg mr-4">
                         <FileText size={24} className="text-primary-600" />
                       </div>
                       
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <h3 className="text-sm font-medium text-gray-900 truncate">
+                          <h3 className="text-sm font-medium text-gray-900 dark:text-white truncate">
                             {doc.name}
                           </h3>
                           {doc.shared && (
-                            <Badge variant="primary" size="sm">Shared</Badge>
+                            <Badge variant="primary" size="sm">{t('Shared')}</Badge>
                           )}
                           {doc.signatureImage && (
-                            <Badge variant="success" size="sm">Signed</Badge>
+                            <Badge variant="success" size="sm">{t('Signed')}</Badge>
                           )}
                         </div>
                         
-                        <div className="flex items-center gap-4 mt-1 text-sm text-gray-500">
+                        <div className="flex items-center gap-4 mt-1 text-sm text-gray-500 dark:text-gray-400">
                           <span>{doc.type}</span>
                           <span>{doc.size}</span>
-                          <span>Uploaded {format(new Date(doc.createdAt), 'PP')}</span>
+                          <span>{t('Uploaded')} {format(new Date(doc.createdAt), 'PP')}</span>
                         </div>
                       </div>
                       
@@ -291,7 +293,7 @@ export const DocumentsPage: React.FC = () => {
                             e.stopPropagation();
                             downloadFile(SERVER_URL + doc.url, doc.name);
                           }}
-                          title="Download"
+                          title={t('Download')}
                         >
                           <Download size={18} />
                         </Button>
@@ -309,9 +311,9 @@ export const DocumentsPage: React.FC = () => {
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="p-2 text-error-600 hover:text-error-700 hover:bg-error-50"
+                          className="p-2 text-error-600 dark:text-error-400 hover:text-error-700 dark:hover:text-error-300 hover:bg-error-50 dark:hover:bg-error-900/30"
                           onClick={(e) => handleDelete(doc.id, e)}
-                          title="Delete"
+                          title={t('Delete')}
                         >
                           <Trash2 size={18} />
                         </Button>
@@ -322,7 +324,7 @@ export const DocumentsPage: React.FC = () => {
               ) : (
                 <div className="text-center py-12 text-gray-500">
                   <FileText size={40} className="mx-auto text-gray-400 mb-2" />
-                  <p>No documents uploaded yet.</p>
+                  <p>{t('No documents uploaded yet.')}</p>
                 </div>
               )}
             </CardBody>
@@ -340,7 +342,7 @@ export const DocumentsPage: React.FC = () => {
                 </button>
               </CardHeader>
               <CardBody className="space-y-4">
-                <div className="p-3 bg-gray-50 rounded-lg text-xs space-y-2">
+                <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg text-xs space-y-2">
                   <p><span className="text-gray-500">File Type:</span> <strong className="text-gray-700 font-medium">{selectedDoc.type}</strong></p>
                   <p><span className="text-gray-500">Size:</span> <strong className="text-gray-700 font-medium">{selectedDoc.size}</strong></p>
                   <p><span className="text-gray-500">Status:</span> <strong className="text-gray-700 font-medium">{selectedDoc.shared ? 'Shared' : 'Private'}</strong></p>

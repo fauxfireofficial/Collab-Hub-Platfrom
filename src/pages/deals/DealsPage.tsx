@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Search, Filter, DollarSign, TrendingUp, Users, Calendar } from 'lucide-react';
 import { Card, CardHeader, CardBody } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
@@ -49,10 +50,11 @@ const deals = [
 ];
 
 export const DealsPage: React.FC = () => {
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string[]>([]);
   
-  const statuses = ['Due Diligence', 'Term Sheet', 'Negotiation', 'Closed', 'Passed'];
+  const statusKeys = ['Due Diligence', 'Term Sheet', 'Negotiation', 'Closed', 'Passed'] as const;
   
   const toggleStatus = (status: string) => {
     setSelectedStatus(prev => 
@@ -83,13 +85,11 @@ export const DealsPage: React.FC = () => {
     <div className="space-y-6 animate-fade-in">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Investment Deals</h1>
-          <p className="text-gray-600">Track and manage your investment pipeline</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('Investment Deals')}</h1>
+          <p className="text-gray-600 dark:text-gray-400">{t('Track and manage your investment pipeline')}</p>
         </div>
         
-        <Button>
-          Add Deal
-        </Button>
+        <Button>{t('Add Deal')}</Button>
       </div>
       
       {/* Stats */}
@@ -101,7 +101,7 @@ export const DealsPage: React.FC = () => {
                 <DollarSign size={20} className="text-primary-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-600">Total Investment</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">{t('Total Investment')}</p>
                 <p className="text-lg font-semibold text-gray-900">$4.3M</p>
               </div>
             </div>
@@ -115,7 +115,7 @@ export const DealsPage: React.FC = () => {
                 <TrendingUp size={20} className="text-secondary-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-600">Active Deals</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">{t('Active Deals')}</p>
                 <p className="text-lg font-semibold text-gray-900">8</p>
               </div>
             </div>
@@ -129,7 +129,7 @@ export const DealsPage: React.FC = () => {
                 <Users size={20} className="text-accent-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-600">Portfolio Companies</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">{t('Portfolio Companies')}</p>
                 <p className="text-lg font-semibold text-gray-900">12</p>
               </div>
             </div>
@@ -143,7 +143,7 @@ export const DealsPage: React.FC = () => {
                 <Calendar size={20} className="text-success-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-600">Closed This Month</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">{t('Closed This Month')}</p>
                 <p className="text-lg font-semibold text-gray-900">2</p>
               </div>
             </div>
@@ -155,7 +155,7 @@ export const DealsPage: React.FC = () => {
       <div className="flex flex-col md:flex-row gap-4">
         <div className="w-full md:w-2/3">
           <Input
-            placeholder="Search deals by startup name or industry..."
+            placeholder={t('Search deals by startup name or industry...')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             startAdornment={<Search size={18} />}
@@ -167,14 +167,14 @@ export const DealsPage: React.FC = () => {
           <div className="flex items-center gap-2">
             <Filter size={18} className="text-gray-500" />
             <div className="flex flex-wrap gap-2">
-              {statuses.map(status => (
+              {statusKeys.map(status => (
                 <Badge
                   key={status}
                   variant={selectedStatus.includes(status) ? getStatusColor(status) : 'gray'}
                   className="cursor-pointer"
                   onClick={() => toggleStatus(status)}
                 >
-                  {status}
+                  {t(status)}
                 </Badge>
               ))}
             </div>
@@ -185,7 +185,7 @@ export const DealsPage: React.FC = () => {
       {/* Deals table */}
       <Card>
         <CardHeader>
-          <h2 className="text-lg font-medium text-gray-900">Active Deals</h2>
+          <h2 className="text-lg font-medium text-gray-900 dark:text-white">{t('Active Deals')}</h2>
         </CardHeader>
         <CardBody>
           <div className="overflow-x-auto">
@@ -193,25 +193,25 @@ export const DealsPage: React.FC = () => {
               <thead>
                 <tr className="border-b border-gray-200">
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Startup
+                    {t('Startup')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Amount
+                    {t('Amount')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Equity
+                    {t('Equity')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
+                    {t('Status')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Stage
+                    {t('Stage')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Last Activity
+                    {t('Last Activity')}
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
+                    {t('Actions')}
                   </th>
                 </tr>
               </thead>
@@ -244,7 +244,7 @@ export const DealsPage: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <Badge variant={getStatusColor(deal.status)}>
-                        {deal.status}
+                        {t(deal.status)}
                       </Badge>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -257,7 +257,7 @@ export const DealsPage: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <Button variant="outline" size="sm">
-                        View Details
+                        {t('View Details')}
                       </Button>
                     </td>
                   </tr>
