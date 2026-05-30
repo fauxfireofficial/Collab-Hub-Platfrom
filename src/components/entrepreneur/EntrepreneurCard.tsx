@@ -46,8 +46,8 @@ export const EntrepreneurCard: React.FC<EntrepreneurCardProps> = ({
           />
           
           <div className="flex-1">
-            <h3 className="text-lg font-semibold text-gray-900 mb-1">{entrepreneur.name}</h3>
-            <p className="text-sm text-gray-500 mb-2">{entrepreneur.startupName}</p>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">{entrepreneur.name}</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">{entrepreneur.startupName}</p>
             
             <div className="flex flex-wrap gap-2 mb-3">
               <Badge variant="primary" size="sm">{entrepreneur.industry}</Badge>
@@ -58,25 +58,25 @@ export const EntrepreneurCard: React.FC<EntrepreneurCardProps> = ({
         </div>
         
         <div className="mt-3">
-          <h4 className="text-sm font-medium text-gray-900 mb-1">Pitch Summary</h4>
-          <p className="text-sm text-gray-600 line-clamp-3">{entrepreneur.pitchSummary}</p>
+          <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-1">Pitch Summary</h4>
+          <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-3">{entrepreneur.pitchSummary}</p>
         </div>
         
         <div className="mt-3 flex justify-between items-center">
           <div>
-            <span className="text-xs text-gray-500">Funding Need</span>
-            <p className="text-sm font-medium text-gray-900">{formatStringCurrency(entrepreneur.fundingNeeded)}</p>
+            <span className="text-xs text-gray-500 dark:text-gray-400">Funding Need</span>
+            <p className="text-sm font-medium text-gray-900 dark:text-white">{formatStringCurrency(entrepreneur.fundingNeeded)}</p>
           </div>
           
           <div>
-            <span className="text-xs text-gray-500">Team Size</span>
-            <p className="text-sm font-medium text-gray-900">{entrepreneur.teamSize} people</p>
+            <span className="text-xs text-gray-500 dark:text-gray-400">Team Size</span>
+            <p className="text-sm font-medium text-gray-900 dark:text-white">{entrepreneur.teamSize} people</p>
           </div>
         </div>
       </CardBody>
       
       {showActions && (
-        <CardFooter className="border-t border-gray-100 bg-gray-50 flex justify-between">
+        <CardFooter className="border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 flex justify-between">
           <Button
             variant="outline"
             size="sm"

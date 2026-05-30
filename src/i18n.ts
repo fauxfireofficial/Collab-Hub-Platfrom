@@ -1,9 +1,19 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
+import { settingsTranslations } from './locales/settingsTranslations';
+import { pagesTranslations } from './locales/pagesTranslations';
+
+type Lang = keyof typeof settingsTranslations;
+
+const mergeLang = (base: Record<string, string>, lang: Lang) => ({
+  ...base,
+  ...settingsTranslations[lang],
+  ...pagesTranslations[lang],
+});
 
 const resources = {
   en: {
-    translation: {
+    translation: mergeLang({
       "Dashboard": "Dashboard",
       "My Startup": "My Startup",
       "My Portfolio": "My Portfolio",
@@ -72,10 +82,10 @@ const resources = {
       "Financial Model (Excel)": "Financial Model (Excel)",
       "Legal / NDA (DOC/PDF)": "Legal / NDA (DOC/PDF)",
       "Product Image / Video": "Product Image / Video"
-    }
+    }, 'en'),
   },
   es: {
-    translation: {
+    translation: mergeLang({
       "Dashboard": "Panel de Control",
       "My Startup": "Mi Startup",
       "My Portfolio": "Mi Portafolio",
@@ -144,10 +154,10 @@ const resources = {
       "Financial Model (Excel)": "Modelo Financiero (Excel)",
       "Legal / NDA (DOC/PDF)": "Legal / NDA (DOC/PDF)",
       "Product Image / Video": "Imagen / Video del Producto"
-    }
+    }, 'es'),
   },
   ur: {
-    translation: {
+    translation: mergeLang({
       "Dashboard": "ڈیش بورڈ",
       "My Startup": "میرا اسٹارٹ اپ",
       "My Portfolio": "میرا پورٹ فولیو",
@@ -216,10 +226,10 @@ const resources = {
       "Financial Model (Excel)": "فنانشل ماڈل (Excel)",
       "Legal / NDA (DOC/PDF)": "قانونی دستاویز / NDA (DOC/PDF)",
       "Product Image / Video": "پروڈکٹ کی تصویر / ویڈیو"
-    }
+    }, 'ur'),
   },
   ar: {
-    translation: {
+    translation: mergeLang({
       "Dashboard": "لوحة القيادة",
       "My Startup": "شركتي الناشئة",
       "My Portfolio": "محفظتي الاستثمارية",
@@ -288,7 +298,7 @@ const resources = {
       "Financial Model (Excel)": "النموذج المالي (Excel)",
       "Legal / NDA (DOC/PDF)": "قانوني / اتفاقية عدم الإفصاح (DOC/PDF)",
       "Product Image / Video": "صورة / فيديو المنتج"
-    }
+    }, 'ar'),
   }
 };
 

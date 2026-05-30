@@ -6,6 +6,8 @@ interface ThemeContextType {
   theme: Theme;
   setTheme: (theme: Theme) => void;
   isDark: boolean;
+  /** When true (auth pages), dark mode is never applied */
+  setForceLightMode: (force: boolean) => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -14,7 +16,6 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [theme, setThemeState] = useState<Theme>(() => {
     try {
       const savedTheme = localStorage.getItem('theme');
-      console.log('[Theme] Initial load from localStorage:', savedTheme);
       if (savedTheme === 'light' || savedTheme === 'dark' || savedTheme === 'system') {
         return savedTheme;
       }
@@ -25,9 +26,9 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   });
 
   const [isDark, setIsDark] = useState(false);
+  const [forceLightMode, setForceLightMode] = useState(false);
 
   const setTheme = (newTheme: Theme) => {
-    console.log('[Theme] Switching theme to:', newTheme);
     setThemeState(newTheme);
     try {
       localStorage.setItem('theme', newTheme);
@@ -42,14 +43,14 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     
     const applyTheme = () => {
       let activeDark = false;
-      
-      if (theme === 'dark') {
-        activeDark = true;
-      } else if (theme === 'system') {
-        activeDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+      if (!forceLightMode) {
+        if (theme === 'dark') {
+          activeDark = true;
+        } else if (theme === 'system') {
+          activeDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        }
       }
-      
-      console.log('[Theme] Applying theme. activeDark =', activeDark, 'theme =', theme);
       
       if (activeDark) {
         root.classList.add('dark');
@@ -66,12 +67,9 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     applyTheme();
 
-    if (theme === 'system') {
+    if (theme === 'system' && !forceLightMode) {
       const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-      const listener = () => {
-        console.log('[Theme] System theme change detected');
-        applyTheme();
-      };
+      const listener = () => applyTheme();
       
       if (mediaQuery.addEventListener) {
         mediaQuery.addEventListener('change', listener);
@@ -87,10 +85,10 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }
       };
     }
-  }, [theme]);
+  }, [theme, forceLightMode]);
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme, isDark }}>
+    <ThemeContext.Provider value={{ theme, setTheme, isDark, setForceLightMode }}>
       {children}
     </ThemeContext.Provider>
   );

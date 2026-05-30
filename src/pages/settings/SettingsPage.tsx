@@ -41,8 +41,8 @@ export const SettingsPage: React.FC = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white transition-colors duration-300">Settings</h1>
-        <p className="text-gray-600 dark:text-gray-400 transition-colors duration-300">Manage your account preferences and settings</p>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white transition-colors duration-300">{t('Settings')}</h1>
+        <p className="text-gray-600 dark:text-gray-400 transition-colors duration-300">{t('Manage your account preferences and settings')}</p>
       </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -78,7 +78,7 @@ export const SettingsPage: React.FC = () => {
           {activeTab === 'profile' && (
             <Card>
               <CardHeader>
-                <h2 className="text-lg font-medium text-gray-900 dark:text-white">Profile Settings</h2>
+                <h2 className="text-lg font-medium text-gray-900 dark:text-white">{t('Profile Settings')}</h2>
               </CardHeader>
               <CardBody className="space-y-6">
                 <div className="flex items-center gap-6">
@@ -90,41 +90,41 @@ export const SettingsPage: React.FC = () => {
                   
                   <div>
                     <Button variant="outline" size="sm">
-                      Change Photo
+                      {t('Change Photo')}
                     </Button>
                     <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                      JPG, GIF or PNG. Max size of 800K
+                      {t('JPG, GIF or PNG. Max size of 800K')}
                     </p>
                   </div>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <Input
-                    label="Full Name"
+                    label={t('Full Name')}
                     defaultValue={user.name}
                   />
                   
                   <Input
-                    label="Email"
+                    label={t('Email')}
                     type="email"
                     defaultValue={user.email}
                   />
                   
                   <Input
-                    label="Role"
+                    label={t('Role')}
                     value={user.role}
                     disabled
                   />
                   
                   <Input
-                    label="Location"
+                    label={t('Location')}
                     defaultValue="San Francisco, CA"
                   />
                 </div>
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Bio
+                    {t('Bio')}
                   </label>
                   <textarea
                     className="w-full rounded-md border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 dark:text-white shadow-sm focus:border-primary-500 focus:ring-primary-500"
@@ -134,8 +134,8 @@ export const SettingsPage: React.FC = () => {
                 </div>
                 
                 <div className="flex justify-end gap-3">
-                  <Button variant="outline">Cancel</Button>
-                  <Button>Save Changes</Button>
+                  <Button variant="outline">{t('Cancel')}</Button>
+                  <Button>{t('Save Changes')}</Button>
                 </div>
               </CardBody>
             </Card>
@@ -145,42 +145,42 @@ export const SettingsPage: React.FC = () => {
           {activeTab === 'security' && (
             <Card>
               <CardHeader>
-                <h2 className="text-lg font-medium text-gray-900 dark:text-white">Security Settings</h2>
+                <h2 className="text-lg font-medium text-gray-900 dark:text-white">{t('Security Settings')}</h2>
               </CardHeader>
               <CardBody className="space-y-6">
                 <div>
-                  <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-4">Two-Factor Authentication</h3>
+                  <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-4">{t('Two-Factor Authentication')}</h3>
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-gray-600 dark:text-gray-400">
-                        Add an extra layer of security to your account
+                        {t('Add an extra layer of security to your account')}
                       </p>
-                      <Badge variant="error" className="mt-1">Not Enabled</Badge>
+                      <Badge variant="error" className="mt-1">{t('Not Enabled')}</Badge>
                     </div>
-                    <Button variant="outline">Enable</Button>
+                    <Button variant="outline">{t('Enable')}</Button>
                   </div>
                 </div>
                 
                 <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
-                  <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-4">Change Password</h3>
+                  <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-4">{t('Change Password')}</h3>
                   <div className="space-y-4">
                     <Input
-                      label="Current Password"
+                      label={t('Current Password')}
                       type="password"
                     />
                     
                     <Input
-                      label="New Password"
+                      label={t('New Password')}
                       type="password"
                     />
                     
                     <Input
-                      label="Confirm New Password"
+                      label={t('Confirm New Password')}
                       type="password"
                     />
                     
                     <div className="flex justify-end">
-                      <Button>Update Password</Button>
+                      <Button>{t('Update Password')}</Button>
                     </div>
                   </div>
                 </div>
@@ -192,15 +192,15 @@ export const SettingsPage: React.FC = () => {
           {activeTab === 'notifications' && (
             <Card>
               <CardHeader>
-                <h2 className="text-lg font-medium text-gray-900 dark:text-white">Notification Preferences</h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Choose how and when you want to receive alerts.</p>
+                <h2 className="text-lg font-medium text-gray-900 dark:text-white">{t('Notification Preferences')}</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('Choose how and when you want to receive alerts.')}</p>
               </CardHeader>
               <CardBody className="space-y-6">
                 <div className="space-y-4">
                   <div className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-gray-700">
                     <div>
-                      <p className="text-sm font-medium text-gray-950 dark:text-gray-100">Email Notifications</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">Get updates on new messages, meetings, and deals sent to your email.</p>
+                      <p className="text-sm font-medium text-gray-950 dark:text-gray-100">{t('Email Notifications')}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{t('Get updates on new messages, meetings, and deals sent to your email.')}</p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input type="checkbox" defaultChecked className="sr-only peer" />
@@ -210,8 +210,8 @@ export const SettingsPage: React.FC = () => {
 
                   <div className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-gray-700">
                     <div>
-                      <p className="text-sm font-medium text-gray-950 dark:text-gray-100">Direct Message Alerts</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">Notify me immediately when I receive a chat message.</p>
+                      <p className="text-sm font-medium text-gray-950 dark:text-gray-100">{t('Direct Message Alerts')}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{t('Notify me immediately when I receive a chat message.')}</p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input type="checkbox" defaultChecked className="sr-only peer" />
@@ -221,8 +221,8 @@ export const SettingsPage: React.FC = () => {
 
                   <div className="flex items-center justify-between py-3">
                     <div>
-                      <p className="text-sm font-medium text-gray-950 dark:text-gray-100">Marketing & News</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">Receive weekly newsletters, platform updates, and curated opportunities.</p>
+                      <p className="text-sm font-medium text-gray-950 dark:text-gray-100">{t('Marketing & News')}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{t('Receive weekly newsletters, platform updates, and curated opportunities.')}</p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input type="checkbox" className="sr-only peer" />
@@ -231,7 +231,7 @@ export const SettingsPage: React.FC = () => {
                   </div>
                 </div>
                 <div className="flex justify-end pt-4 border-t border-gray-100 dark:border-gray-700">
-                  <Button>Save Settings</Button>
+                  <Button>{t('Save Settings')}</Button>
                 </div>
               </CardBody>
             </Card>
@@ -241,8 +241,8 @@ export const SettingsPage: React.FC = () => {
           {activeTab === 'language' && (
             <Card>
               <CardHeader>
-                <h2 className="text-lg font-medium text-gray-900 dark:text-white">{t('Language')} & Region</h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Select your preferred language and regional settings.</p>
+                <h2 className="text-lg font-medium text-gray-900 dark:text-white">{t('Language & Region')}</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('Select your preferred language and regional settings.')}</p>
               </CardHeader>
               <CardBody className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -282,7 +282,7 @@ export const SettingsPage: React.FC = () => {
                       onChange={(e) => setTimezone(e.target.value)}
                       className="w-full rounded-md border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 dark:text-white p-2.5 shadow-sm focus:border-primary-500 focus:ring-primary-500 disabled:opacity-50 transition-opacity"
                     >
-                      <option value={timezone}>{timezone} (Current)</option>
+                      <option value={timezone}>{timezone} ({t('Current')})</option>
                       <option value="Asia/Karachi">Asia/Karachi (PKT)</option>
                       <option value="America/New_York">America/New_York (EST)</option>
                       <option value="Europe/London">Europe/London (GMT)</option>
@@ -293,11 +293,11 @@ export const SettingsPage: React.FC = () => {
                 </div>
 
                 <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
-                  <h3 className="text-md font-medium text-gray-900 dark:text-white mb-4">Currency & Region Specifics</h3>
+                  <h3 className="text-md font-medium text-gray-900 dark:text-white mb-4">{t('Currency & Region Specifics')}</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Preferred Currency
+                        {t('Preferred Currency')}
                       </label>
                       <select
                         value={currency}
@@ -310,7 +310,7 @@ export const SettingsPage: React.FC = () => {
                         <option value="EUR">EUR (€) - Euro</option>
                       </select>
                       <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                        All investments, wallet balance, and transaction amounts will convert instantly in real-time.
+                        {t('All investments, wallet balance, and transaction amounts will convert instantly in real-time.')}
                       </p>
                     </div>
                   </div>
@@ -327,13 +327,13 @@ export const SettingsPage: React.FC = () => {
           {activeTab === 'appearance' && (
             <Card>
               <CardHeader>
-                <h2 className="text-lg font-medium text-gray-900 dark:text-white">Appearance Settings</h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Customize how Business Nexus looks on your device.</p>
+                <h2 className="text-lg font-medium text-gray-900 dark:text-white">{t('Appearance Settings')}</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('Customize how Business Nexus looks on your device.')}</p>
               </CardHeader>
               <CardBody className="space-y-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">
-                    Choose Theme
+                    {t('Choose Theme')}
                   </label>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {/* Light theme option */}
@@ -356,8 +356,8 @@ export const SettingsPage: React.FC = () => {
                           <div className="w-4/5 h-3 bg-white rounded shadow-sm border border-gray-150" />
                         </div>
                       </div>
-                      <span className="font-semibold text-gray-900 dark:text-white">Light Mode</span>
-                      <span className="text-xs text-gray-500 dark:text-gray-400 mt-1 text-center">Sleek, bright, and easy on the eyes</span>
+                      <span className="font-semibold text-gray-900 dark:text-white">{t('Light Mode')}</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400 mt-1 text-center">{t('Sleek, bright, and easy on the eyes')}</span>
                       {theme === 'light' && (
                         <div className="absolute top-2 right-2 w-5 h-5 bg-primary-600 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-md">
                           ✓
@@ -385,8 +385,8 @@ export const SettingsPage: React.FC = () => {
                           <div className="w-4/5 h-3 bg-gray-800 rounded shadow-sm border border-gray-750" />
                         </div>
                       </div>
-                      <span className="font-semibold text-gray-900 dark:text-white">Dark Mode</span>
-                      <span className="text-xs text-gray-500 dark:text-gray-400 mt-1 text-center">Premium aesthetic, comfortable dark theme</span>
+                      <span className="font-semibold text-gray-900 dark:text-white">{t('Dark Mode')}</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400 mt-1 text-center">{t('Premium aesthetic, comfortable dark theme')}</span>
                       {theme === 'dark' && (
                         <div className="absolute top-2 right-2 w-5 h-5 bg-primary-600 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-md">
                           ✓
@@ -422,8 +422,8 @@ export const SettingsPage: React.FC = () => {
                           </div>
                         </div>
                       </div>
-                      <span className="font-semibold text-gray-900 dark:text-white">System Default</span>
-                      <span className="text-xs text-gray-500 dark:text-gray-400 mt-1 text-center">Automatically matches your system theme</span>
+                      <span className="font-semibold text-gray-900 dark:text-white">{t('System Default')}</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400 mt-1 text-center">{t('Automatically matches your system theme')}</span>
                       {theme === 'system' && (
                         <div className="absolute top-2 right-2 w-5 h-5 bg-primary-600 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-md">
                           ✓
@@ -434,11 +434,11 @@ export const SettingsPage: React.FC = () => {
                 </div>
 
                 <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
-                  <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Interface Effects</h3>
+                  <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">{t('Interface Effects')}</h3>
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-gray-950 dark:text-gray-300 font-medium">Reduce Motion</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">Minimize animations and transition effects.</p>
+                      <p className="text-sm text-gray-950 dark:text-gray-300 font-medium">{t('Reduce Motion')}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{t('Minimize animations and transition effects.')}</p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input type="checkbox" className="sr-only peer" />
@@ -454,29 +454,29 @@ export const SettingsPage: React.FC = () => {
           {activeTab === 'billing' && (
             <Card>
               <CardHeader>
-                <h2 className="text-lg font-medium text-gray-900 dark:text-white">Billing & Subscriptions</h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Manage your subscription plan, billing details, and receipts.</p>
+                <h2 className="text-lg font-medium text-gray-900 dark:text-white">{t('Billing & Subscriptions')}</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('Manage your subscription plan, billing details, and receipts.')}</p>
               </CardHeader>
               <CardBody className="space-y-6">
                 <div className="p-4 rounded-lg bg-primary-50 dark:bg-primary-950/20 border border-primary-100 dark:border-primary-900/30 flex items-center justify-between">
                   <div>
-                    <h3 className="text-sm font-semibold text-primary-900 dark:text-primary-400 font-medium">Pro Plan (Annual)</h3>
-                    <p className="text-xs text-primary-700 dark:text-primary-300/80 mt-1">Your next renewal date is December 15, 2026.</p>
+                    <h3 className="text-sm font-semibold text-primary-900 dark:text-primary-400 font-medium">{t('Pro Plan (Annual)')}</h3>
+                    <p className="text-xs text-primary-700 dark:text-primary-300/80 mt-1">{t('Your next renewal date is December 15, 2026.')}</p>
                   </div>
-                  <Badge variant="success">Active</Badge>
+                  <Badge variant="success">{t('Active')}</Badge>
                 </div>
 
                 <div>
-                  <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-4">Payment Methods</h3>
+                  <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-4">{t('Payment Methods')}</h3>
                   <div className="flex items-center justify-between p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
                     <div className="flex items-center gap-3">
                       <CreditCard className="text-gray-500 dark:text-gray-400" />
                       <div>
-                        <p className="text-sm font-medium text-gray-900 dark:text-white">Visa ending in 4242</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">Expires 12/28</p>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">{t('Visa ending in 4242')}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{t('Expires 12/28')}</p>
                       </div>
                     </div>
-                    <Button variant="outline" size="sm">Edit</Button>
+                    <Button variant="outline" size="sm">{t('Edit')}</Button>
                   </div>
                 </div>
               </CardBody>

@@ -27,9 +27,9 @@ export const Navbar: React.FC = () => {
     ? '/dashboard/entrepreneur'
     : '/dashboard/investor';
 
-  // User profile route based on role and ID
+  // User profile route
   const profileRoute = user
-    ? `/profile/${user.role}/${user.id}`
+    ? '/profile'
     : '/login';
 
   const isActive = (path: string) => location.pathname.startsWith(path);

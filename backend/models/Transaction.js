@@ -2,10 +2,22 @@ import mongoose from 'mongoose';
 
 const transactionSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  type: { type: String, enum: ['deposit', 'withdraw', 'transfer'], required: true },
+  type: { 
+    type: String, 
+    enum: ['deposit', 'withdraw', 'transfer', 'escrow', 'escrow_release'], 
+    required: true 
+  },
   amount: { type: Number, required: true },
-  recipientId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // Optional, for transfers
-  status: { type: String, enum: ['Pending', 'Completed', 'Failed'], default: 'Completed' }
+  currency: { type: String, default: 'USD' },
+  recipientId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  status: { 
+    type: String, 
+    enum: ['pending', 'completed', 'failed', 'held'], 
+    default: 'completed' 
+  },
+  milestoneId: { type: mongoose.Schema.Types.ObjectId, ref: 'Milestone' },
+  idempotencyKey: { type: String, unique: true, sparse: true },
+  agreementAccepted: { type: Boolean, default: false }
 }, { timestamps: true });
 
 transactionSchema.set('toJSON', {

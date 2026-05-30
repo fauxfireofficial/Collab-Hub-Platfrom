@@ -12,6 +12,9 @@ import { DashboardLayout } from './components/layout/DashboardLayout';
 // Auth Pages
 import { LoginPage } from './pages/auth/LoginPage';
 import { RegisterPage } from './pages/auth/RegisterPage';
+import { ForgotPasswordPage } from './pages/auth/ForgotPasswordPage';
+import { ResetPasswordPage } from './pages/auth/ResetPasswordPage';
+import { AuthThemeGuard } from './components/layout/AuthThemeGuard';
 
 // Dashboard Pages
 import { EntrepreneurDashboard } from './pages/dashboard/EntrepreneurDashboard';
@@ -46,6 +49,15 @@ const RootRedirect = () => {
   return <Navigate to={user.role === 'investor' ? '/dashboard/investor' : '/dashboard/entrepreneur'} replace />;
 };
 
+const CurrentUserProfile = () => {
+  const { user } = useAuth();
+  if (!user) return <Navigate to="/login" replace />;
+  if (user.role === 'investor') {
+    return <InvestorProfile />;
+  }
+  return <EntrepreneurProfile />;
+};
+
 function App() {
   return (
     <ThemeProvider>
@@ -55,8 +67,10 @@ function App() {
             <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <Routes>
           {/* Authentication Routes */}
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/login" element={<AuthThemeGuard><LoginPage /></AuthThemeGuard>} />
+          <Route path="/register" element={<AuthThemeGuard><RegisterPage /></AuthThemeGuard>} />
+          <Route path="/forgot-password" element={<AuthThemeGuard><ForgotPasswordPage /></AuthThemeGuard>} />
+          <Route path="/reset-password" element={<AuthThemeGuard><ResetPasswordPage /></AuthThemeGuard>} />
           
           {/* Dashboard Routes */}
           <Route path="/dashboard" element={<DashboardLayout />}>
@@ -66,6 +80,7 @@ function App() {
           
           {/* Profile Routes */}
           <Route path="/profile" element={<DashboardLayout />}>
+            <Route index element={<CurrentUserProfile />} />
             <Route path="entrepreneur/:id" element={<EntrepreneurProfile />} />
             <Route path="investor/:id" element={<InvestorProfile />} />
           </Route>

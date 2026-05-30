@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Calendar as CalendarIcon, Clock, Video, User as UserIcon, Plus, Check, X, AlertCircle } from 'lucide-react';
 import { Card, CardHeader, CardBody } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -30,6 +31,7 @@ interface Meeting {
 }
 
 export const MeetingsPage: React.FC = () => {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [partners, setPartners] = useState<MeetingPartner[]>([]);
@@ -138,29 +140,29 @@ export const MeetingsPage: React.FC = () => {
     <div className="space-y-6 animate-fade-in">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Meetings & Calendar</h1>
-          <p className="text-gray-600">Schedule connections and jump into WebRTC video calls</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('Meetings & Calendar')}</h1>
+          <p className="text-gray-600 dark:text-gray-400">{t('Schedule connections and jump into WebRTC video calls')}</p>
         </div>
         
         <Button 
           leftIcon={<Plus size={18} />}
           onClick={() => setShowScheduleForm(!showScheduleForm)}
         >
-          {showScheduleForm ? 'Hide Scheduler' : 'Schedule Meeting'}
+          {showScheduleForm ? t('Hide Scheduler') : t('Schedule Meeting')}
         </Button>
       </div>
 
       {showScheduleForm && (
         <Card className="max-w-2xl border-primary-100">
           <CardHeader>
-            <h2 className="text-lg font-medium text-gray-900">Book a Time Slot</h2>
+            <h2 className="text-lg font-medium text-gray-900 dark:text-white">{t('Book a Time Slot')}</h2>
           </CardHeader>
           <CardBody>
             <form onSubmit={handleScheduleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Select {user.role === 'entrepreneur' ? 'Investor' : 'Startup Partner'}
+                    {user.role === 'entrepreneur' ? t('Select Investor') : t('Select Startup Partner')}
                   </label>
                   <select
                     className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-primary-500 focus:border-primary-500"
@@ -168,7 +170,7 @@ export const MeetingsPage: React.FC = () => {
                     onChange={(e) => setInviteeId(e.target.value)}
                     required
                   >
-                    <option value="">-- Choose Partner --</option>
+                    <option value="">-- {t('Choose Partner')} --</option>
                     {partners.map(p => (
                       <option key={p.id} value={p.id}>
                         {p.name} {p.startupName ? `(${p.startupName})` : ''}
@@ -178,8 +180,8 @@ export const MeetingsPage: React.FC = () => {
                 </div>
 
                 <Input
-                  label="Meeting Title"
-                  placeholder="e.g. Pitch Deck Review"
+                  label={t('Meeting Title')}
+                  placeholder={t('e.g. Pitch Deck Review')}
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   required
@@ -189,7 +191,7 @@ export const MeetingsPage: React.FC = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <Input
-                  label="Date"
+                  label={t('Date')}
                   type="date"
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
@@ -197,7 +199,7 @@ export const MeetingsPage: React.FC = () => {
                   fullWidth
                 />
                 <Input
-                  label="Start Time"
+                  label={t('Start Time')}
                   type="time"
                   value={startTime}
                   onChange={(e) => setStartTime(e.target.value)}
@@ -205,7 +207,7 @@ export const MeetingsPage: React.FC = () => {
                   fullWidth
                 />
                 <Input
-                  label="End Time"
+                  label={t('End Time')}
                   type="time"
                   value={endTime}
                   onChange={(e) => setEndTime(e.target.value)}
@@ -215,22 +217,22 @@ export const MeetingsPage: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Agenda / Description</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('Agenda / Description')}</label>
                 <textarea
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-primary-500"
+                  className="w-full border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white rounded-md px-3 py-2 text-sm focus:ring-primary-500"
                   rows={3}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Describe what we will talk about..."
+                  placeholder={t('Describe what we will talk about...')}
                 />
               </div>
 
               <div className="flex justify-end gap-3">
                 <Button variant="outline" type="button" onClick={() => setShowScheduleForm(false)}>
-                  Cancel
+                  {t('Cancel')}
                 </Button>
                 <Button type="submit" isLoading={isSubmitting}>
-                  Request Booking
+                  {t('Request Booking')}
                 </Button>
               </div>
             </form>
@@ -244,11 +246,11 @@ export const MeetingsPage: React.FC = () => {
         <div className="lg:col-span-2 space-y-4">
           <Card>
             <CardHeader>
-              <h2 className="text-lg font-medium text-gray-900">Upcoming Scheduled Meetings</h2>
+              <h2 className="text-lg font-medium text-gray-900 dark:text-white">{t('Upcoming Scheduled Meetings')}</h2>
             </CardHeader>
             <CardBody>
               {isLoading ? (
-                <p className="text-center py-4 text-gray-500">Loading your calendar...</p>
+                <p className="text-center py-4 text-gray-500">{t('Loading your calendar...')}</p>
               ) : upcomingMeetings.length > 0 ? (
                 <div className="divide-y divide-gray-100">
                   {upcomingMeetings.map(meeting => {
@@ -264,7 +266,7 @@ export const MeetingsPage: React.FC = () => {
                           </div>
                           <div>
                             <h3 className="font-semibold text-gray-900">{meeting.title}</h3>
-                            <p className="text-sm text-gray-500">{meeting.description || 'No description provided.'}</p>
+                            <p className="text-sm text-gray-500">{meeting.description || t('No description provided.')}</p>
                             
                             <div className="flex flex-wrap gap-4 mt-2 text-xs text-gray-500 items-center">
                               <span className="flex items-center gap-1">
@@ -273,7 +275,7 @@ export const MeetingsPage: React.FC = () => {
                               </span>
                               <span className="flex items-center gap-1">
                                 <UserIcon size={14} />
-                                With {partner?.name} {partner?.startupName ? `(${partner.startupName})` : ''}
+                                {t('With')} {partner?.name} {partner?.startupName ? `(${partner.startupName})` : ''}
                               </span>
                             </div>
                           </div>
@@ -282,10 +284,10 @@ export const MeetingsPage: React.FC = () => {
                         <div className="flex items-center gap-2 self-end md:self-auto">
                           {/* Display Status Badge */}
                           {meeting.status === 'pending' && (
-                            <Badge variant="warning">Pending Approval</Badge>
+                            <Badge variant="warning">{t('Pending Approval')}</Badge>
                           )}
                           {meeting.status === 'accepted' && (
-                            <Badge variant="success">Confirmed</Badge>
+                            <Badge variant="success">{t('Confirmed')}</Badge>
                           )}
 
                           {/* Action controls for the invitee if pending */}
@@ -296,7 +298,7 @@ export const MeetingsPage: React.FC = () => {
                                 variant="primary" 
                                 className="p-2"
                                 onClick={() => handleUpdateStatus(meeting.id, 'accepted')}
-                                title="Accept Invitation"
+                                title={t('Accept Invitation')}
                               >
                                 <Check size={16} />
                               </Button>
@@ -305,7 +307,7 @@ export const MeetingsPage: React.FC = () => {
                                 variant="outline" 
                                 className="p-2 text-error-600 hover:bg-error-50"
                                 onClick={() => handleUpdateStatus(meeting.id, 'rejected')}
-                                title="Reject Invitation"
+                                title={t('Reject Invitation')}
                               >
                                 <X size={16} />
                               </Button>
@@ -316,7 +318,7 @@ export const MeetingsPage: React.FC = () => {
                           {meeting.status === 'accepted' && (
                             <a href={meeting.roomUrl}>
                               <Button size="sm" leftIcon={<Video size={16} />}>
-                                Join Video
+                                {t('Join Video')}
                               </Button>
                             </a>
                           )}
@@ -328,7 +330,7 @@ export const MeetingsPage: React.FC = () => {
               ) : (
                 <div className="text-center py-8 text-gray-500">
                   <AlertCircle size={32} className="mx-auto text-gray-400 mb-2" />
-                  <p>No upcoming meetings scheduled.</p>
+                  <p>{t('No upcoming meetings scheduled.')}</p>
                 </div>
               )}
             </CardBody>
@@ -339,7 +341,7 @@ export const MeetingsPage: React.FC = () => {
         <div className="space-y-4">
           <Card>
             <CardHeader>
-              <h2 className="text-lg font-medium text-gray-900">Past & Cancelled Meetings</h2>
+              <h2 className="text-lg font-medium text-gray-900 dark:text-white">{t('Past & Cancelled Meetings')}</h2>
             </CardHeader>
             <CardBody>
               {pastMeetings.length > 0 ? (
@@ -355,20 +357,20 @@ export const MeetingsPage: React.FC = () => {
                           <h4 className="font-semibold text-gray-800 truncate">{meeting.title}</h4>
                           <span className="capitalize text-gray-500">
                             {meeting.status === 'rejected' ? (
-                              <span className="text-error-600">Declined</span>
+                              <span className="text-error-600">{t('Declined')}</span>
                             ) : (
-                              'Completed'
+                              t('Completed')
                             )}
                           </span>
                         </div>
                         <p className="text-gray-500">{format(startTimeDate, 'PPp')}</p>
-                        <p className="text-gray-600 font-medium">With {partner?.name}</p>
+                        <p className="text-gray-600 font-medium">{t('With')} {partner?.name}</p>
                       </div>
                     );
                   })}
                 </div>
               ) : (
-                <p className="text-sm text-gray-500 text-center py-4">No past meetings found.</p>
+                <p className="text-sm text-gray-500 text-center py-4">{t('No past meetings found.')}</p>
               )}
             </CardBody>
           </Card>

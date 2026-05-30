@@ -117,7 +117,7 @@ const VoicePlayer: React.FC<VoicePlayerProps> = ({ url, isCurrentUser }) => {
     <div className={`flex items-center space-x-3 p-3.5 border rounded-2xl max-w-xs sm:max-w-sm text-gray-800 shadow-sm transition-all ${
       isCurrentUser 
         ? 'bg-primary-50 border-primary-100 hover:bg-primary-100/50' 
-        : 'bg-white border-gray-200 hover:bg-gray-50'
+        : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
     }`}>
       {/* Play/Pause Button */}
       <button
@@ -126,7 +126,7 @@ const VoicePlayer: React.FC<VoicePlayerProps> = ({ url, isCurrentUser }) => {
         className={`w-11 h-11 rounded-full flex items-center justify-center transition-all ${
           isCurrentUser 
             ? 'bg-primary-600 hover:bg-primary-700 text-white shadow-sm' 
-            : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+            : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300'
         }`}
       >
         {isPlaying ? (
@@ -146,7 +146,7 @@ const VoicePlayer: React.FC<VoicePlayerProps> = ({ url, isCurrentUser }) => {
             value={currentTime}
             onChange={handleProgressChange}
             className={`w-full h-1 rounded-lg appearance-none cursor-pointer focus:outline-none accent-primary-600 ${
-              isCurrentUser ? 'bg-primary-200' : 'bg-gray-200'
+              isCurrentUser ? 'bg-primary-200' : 'bg-gray-200 dark:bg-gray-600'
             }`}
           />
         </div>
@@ -297,7 +297,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
     // ── Image ──────────────────────────────────────────────────────────────
     if (isImage) {
       return (
-        <div className="rounded-xl overflow-hidden border border-gray-200 bg-gray-50 max-w-xs sm:max-w-sm">
+        <div className="rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 max-w-xs sm:max-w-sm">
           <img
             src={fullFileUrl}
             alt={attachmentData.fileName}
@@ -305,7 +305,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
             onClick={() => setShowLightbox(true)}
           />
           {caption && (
-            <div className={`px-3 py-2 text-sm ${isCurrentUser ? 'bg-primary-600 text-white' : 'bg-white text-gray-800'}`}>
+            <div className={`px-3 py-2 text-sm ${isCurrentUser ? 'bg-primary-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200'}`}>
               {caption}
             </div>
           )}
@@ -316,7 +316,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
     // ── Video ──────────────────────────────────────────────────────────────
     if (isVideo) {
       return (
-        <div className="rounded-xl overflow-hidden border border-gray-200 bg-black max-w-xs sm:max-w-sm">
+        <div className="rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-black max-w-xs sm:max-w-sm">
           {/* Thumbnail / clickable area */}
           <div className="relative cursor-pointer group" onClick={() => setShowLightbox(true)}>
             <video
@@ -333,7 +333,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
             </div>
           </div>
           {caption && (
-            <div className={`px-3 py-2 text-sm ${isCurrentUser ? 'bg-primary-600 text-white' : 'bg-white text-gray-800'}`}>
+            <div className={`px-3 py-2 text-sm ${isCurrentUser ? 'bg-primary-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200'}`}>
               {caption}
             </div>
           )}
@@ -347,11 +347,11 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
     const isLegal = attachmentData.fileType === 'legal';
 
     return (
-      <div className="flex items-center space-x-3 p-3 bg-white border border-gray-200 rounded-lg max-w-xs sm:max-w-sm text-gray-800 shadow-sm relative">
+      <div className="flex items-center space-x-3 p-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg max-w-xs sm:max-w-sm text-gray-800 shadow-sm relative">
         <div className={`p-2.5 rounded-lg ${
           isPdf ? 'bg-red-50 text-red-600' :
           isExcel ? 'bg-green-50 text-green-600' :
-          isLegal ? 'bg-blue-50 text-blue-600' : 'bg-gray-50 text-gray-600'
+          isLegal ? 'bg-blue-50 text-blue-600' : 'bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
         }`}>
           {isPdf && <FileText size={24} />}
           {isExcel && <FileSpreadsheet size={24} />}
@@ -360,10 +360,10 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
         </div>
         
         <div className="flex-1 min-w-0 pr-6">
-          <p className="text-sm font-semibold text-gray-900 truncate" title={attachmentData.fileName}>
+          <p className="text-sm font-semibold text-gray-900 dark:text-white truncate" title={attachmentData.fileName}>
             {attachmentData.fileName}
           </p>
-          <p className="text-xs text-gray-500 truncate">
+          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
             {attachmentData.fileSize} • {
               isPdf ? 'PITCH DECK' :
               isExcel ? 'FINANCIAL MODEL' :
@@ -378,7 +378,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
             e.stopPropagation();
             downloadFile(fullFileUrl, attachmentData.fileName);
           }}
-          className="p-2 rounded-full hover:bg-gray-100 text-gray-500 hover:text-gray-900 transition-colors mr-2 z-10 focus:outline-none"
+          className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors mr-2 z-10 focus:outline-none"
           title="Download file locally"
         >
           <Download size={16} />
@@ -413,7 +413,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
                 : `px-4 py-2 ${
                     isCurrentUser
                       ? 'bg-primary-600 text-white rounded-br-none'
-                      : 'bg-gray-100 text-gray-800 rounded-bl-none'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-bl-none'
                   }`
             }`}
           >
@@ -439,7 +439,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
 
                 {/* Dropdown menu */}
                 {showMenu && (
-                  <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg py-1 w-32 z-50 text-gray-800 animate-fade-in">
+                  <div className="absolute right-0 top-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1 w-32 z-50 text-gray-800 animate-fade-in">
                     {isAttachment ? (
                       <>
                         <button

@@ -235,9 +235,10 @@ export const InvestorProfile: React.FC = () => {
   
   useEffect(() => {
     const fetchProfileData = async () => {
-      if (!id) return;
+      const targetId = id || currentUser?.id;
+      if (!targetId) return;
       try {
-        const profileRes = await api.get(`/users/profile/${id}`);
+        const profileRes = await api.get(`/users/profile/${targetId}`);
         setInvestor(profileRes.data);
       } catch (err) {
         console.error('Failed to load profile:', err);
@@ -247,7 +248,7 @@ export const InvestorProfile: React.FC = () => {
     };
     
     fetchProfileData();
-  }, [id]);
+  }, [id, currentUser]);
 
   const openEditModal = () => {
     if (investor) {
@@ -297,7 +298,7 @@ export const InvestorProfile: React.FC = () => {
   if (isLoading) {
     return (
       <div className="flex justify-center items-center py-12">
-        <p className="text-gray-500 text-lg">Loading investor profile...</p>
+        <p className="text-gray-500 text-lg">{t('Loading investor profile...')}</p>
       </div>
     );
   }
@@ -305,8 +306,8 @@ export const InvestorProfile: React.FC = () => {
   if (!investor || investor.role !== 'investor') {
     return (
       <div className="text-center py-12">
-        <h2 className="text-2xl font-bold text-gray-900">Investor not found</h2>
-        <p className="text-gray-600 mt-2">The investor profile you're looking for doesn't exist or has been removed.</p>
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{t('Investor not found')}</h2>
+        <p className="text-gray-600 dark:text-gray-400 mt-2">{t("The investor profile you're looking for doesn't exist or has been removed.")}</p>
         <Link to="/dashboard/entrepreneur">
           <Button variant="outline" className="mt-4">Back to Dashboard</Button>
         </Link>
@@ -355,8 +356,8 @@ export const InvestorProfile: React.FC = () => {
                 <Button
                   leftIcon={<MessageCircle size={18} />}
                 >
-                  Message
-                </Button>
+                  {t('Message')}
+                  </Button>
               </Link>
             )}
             
@@ -366,7 +367,7 @@ export const InvestorProfile: React.FC = () => {
                 leftIcon={<UserCircle size={18} />}
                 onClick={openEditModal}
               >
-                Edit Profile
+                {t('Edit Profile')}
               </Button>
             )}
           </div>
@@ -379,7 +380,7 @@ export const InvestorProfile: React.FC = () => {
           {/* About */}
           <Card>
             <CardHeader>
-              <h2 className="text-lg font-medium text-gray-900">About</h2>
+              <h2 className="text-lg font-medium text-gray-900 dark:text-white">{t('About')}</h2>
             </CardHeader>
             <CardBody>
               <p className="text-gray-750 leading-relaxed whitespace-pre-wrap">{investor.bio || 'No bio written yet.'}</p>
@@ -389,12 +390,12 @@ export const InvestorProfile: React.FC = () => {
           {/* Investment Interests */}
           <Card>
             <CardHeader>
-              <h2 className="text-lg font-medium text-gray-900">Investment Interests</h2>
+              <h2 className="text-lg font-medium text-gray-900 dark:text-white">{t('Investment Interests')}</h2>
             </CardHeader>
             <CardBody>
               <div className="space-y-4">
                 <div>
-                  <h3 className="text-md font-medium text-gray-900">Industries</h3>
+                  <h3 className="text-md font-medium text-gray-900 dark:text-white">{t('Industries')}</h3>
                   <div className="flex flex-wrap gap-2 mt-2">
                     {investor.investmentInterests && investor.investmentInterests.length > 0 ? (
                       investor.investmentInterests.map((interest: string, index: number) => (
@@ -407,7 +408,7 @@ export const InvestorProfile: React.FC = () => {
                 </div>
                 
                 <div>
-                  <h3 className="text-md font-medium text-gray-900">Investment Stages</h3>
+                  <h3 className="text-md font-medium text-gray-900 dark:text-white">{t('Investment Stages')}</h3>
                   <div className="flex flex-wrap gap-2 mt-2">
                     {investor.investmentStage && investor.investmentStage.length > 0 ? (
                       investor.investmentStage.map((stage: string, index: number) => (
@@ -425,7 +426,7 @@ export const InvestorProfile: React.FC = () => {
           {/* Portfolio Companies */}
           <Card>
             <CardHeader className="flex justify-between items-center">
-              <h2 className="text-lg font-medium text-gray-900">Portfolio Companies</h2>
+              <h2 className="text-lg font-medium text-gray-900 dark:text-white">{t('Portfolio Companies')}</h2>
               <span className="text-sm text-gray-500">{(investor.portfolioCompanies || []).length} companies</span>
             </CardHeader>
             <CardBody>
@@ -485,14 +486,14 @@ export const InvestorProfile: React.FC = () => {
       {/* Edit Profile Modal Dialog */}
       {isEditing && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-gray-155 animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-gray-155 dark:border-gray-800 animate-in fade-in zoom-in-95 duration-200">
             <form onSubmit={handleSave}>
-              <div className="px-6 py-4 border-b border-gray-150 flex justify-between items-center bg-gray-50/50">
-                <h3 className="text-lg font-semibold text-gray-900">Edit Profile Details</h3>
+              <div className="px-6 py-4 border-b border-gray-150 dark:border-gray-800 flex justify-between items-center bg-gray-50/50 dark:bg-gray-800/50">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('Edit Profile Details')}</h3>
                 <button 
                   type="button" 
                   onClick={() => setIsEditing(false)}
-                  className="text-gray-450 hover:text-gray-700 text-2xl font-semibold transition-colors"
+                  className="text-gray-450 hover:text-gray-700 dark:hover:text-gray-300 text-2xl font-semibold transition-colors"
                 >
                   &times;
                 </button>
@@ -500,21 +501,21 @@ export const InvestorProfile: React.FC = () => {
               
               <div className="p-6 space-y-4">
                 {/* File Upload Selector */}
-                <div className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg border border-gray-150">
+                <div className="flex items-center space-x-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-150 dark:border-gray-700">
                   <Avatar
                     src={editAvatarUrl}
                     alt="Preview"
                     size="xl"
                   />
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Profile Picture / Icon
                     </label>
                     <input
                       type="file"
                       accept="image/*"
                       onChange={handleFileChange}
-                      className="text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100 cursor-pointer"
+                      className="text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary-50 dark:file:bg-primary-900/30 file:text-primary-700 dark:file:text-primary-300 hover:file:bg-primary-100 dark:hover:file:bg-primary-900/50 cursor-pointer"
                     />
                     {isUploading && (
                       <p className="text-xs text-primary-600 mt-1 animate-pulse">Uploading image...</p>
@@ -576,19 +577,19 @@ export const InvestorProfile: React.FC = () => {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Bio
                   </label>
                   <textarea
                     value={editBio}
                     onChange={(e) => setEditBio(e.target.value)}
                     rows={4}
-                    className="block w-full rounded-lg border-gray-300 border px-3 py-2 shadow-sm focus:border-primary-500 focus:ring-primary-500/20 focus:ring-4 transition-all duration-200 sm:text-sm focus:outline-none hover:border-gray-400"
+                    className="block w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white border px-3 py-2 shadow-sm focus:border-primary-500 focus:ring-primary-500/20 focus:ring-4 transition-all duration-200 sm:text-sm focus:outline-none hover:border-gray-400 dark:hover:border-gray-600"
                   />
                 </div>
               </div>
               
-              <div className="px-6 py-4 border-t border-gray-150 flex justify-end space-x-2 bg-gray-50/50">
+              <div className="px-6 py-4 border-t border-gray-150 dark:border-gray-800 flex justify-end space-x-2 bg-gray-50/50 dark:bg-gray-800/50">
                 <Button
                   type="button"
                   variant="outline"
