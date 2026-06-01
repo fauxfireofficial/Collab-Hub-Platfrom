@@ -3,7 +3,7 @@ import React from 'react';
 export type AvatarSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'xxl';
 
 interface AvatarProps {
-  src: string;
+  src?: string;
   alt: string;
   size?: AvatarSize;
   className?: string;
@@ -42,7 +42,7 @@ export const Avatar: React.FC<AvatarProps> = ({
     xxl: 'h-6 w-6',
   };
   
-  const getAvatarSrc = (url: string) => {
+  const getAvatarSrc = (url?: string) => {
     if (!url) return '';
     if (url.startsWith('/uploads')) {
       const backendUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace('/api', '');
