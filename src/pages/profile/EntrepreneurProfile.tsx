@@ -241,14 +241,15 @@ export const EntrepreneurProfile: React.FC = () => {
 
   useEffect(() => {
     const fetchProfileData = async () => {
-      if (!id) return;
+      const targetId = id || currentUser?.id;
+      if (!targetId) return;
       try {
-        const profileRes = await api.get(`/users/profile/${id}`);
+        const profileRes = await api.get(`/users/profile/${targetId}`);
         setEntrepreneur(profileRes.data);
 
         if (currentUser?.role === 'investor') {
           const reqRes = await api.get('/users/connect/requests');
-          const exists = reqRes.data.some((req: any) => req.entrepreneurId === id);
+          const exists = reqRes.data.some((req: any) => req.entrepreneurId === targetId);
           setHasRequestedCollaboration(exists);
         }
       } catch (err) {
@@ -262,10 +263,11 @@ export const EntrepreneurProfile: React.FC = () => {
   }, [id, currentUser]);
   
   const handleSendRequest = async () => {
-    if (currentUser?.role === 'investor' && id && entrepreneur) {
+    const targetId = id || currentUser?.id;
+    if (currentUser?.role === 'investor' && targetId && entrepreneur) {
       try {
         await api.post('/users/connect', {
-          recipientId: id,
+          recipientId: targetId,
           message: `I'm interested in learning more about ${entrepreneur.startupName || 'your startup'} and would like to explore potential investment opportunities.`
         });
         setHasRequestedCollaboration(true);
@@ -323,7 +325,7 @@ export const EntrepreneurProfile: React.FC = () => {
   if (isLoading) {
     return (
       <div className="flex justify-center items-center py-12">
-        <p className="text-gray-500 text-lg">Loading startup profile...</p>
+        <p className="text-gray-500 text-lg">{t('Loading startup profile...')}</p>
       </div>
     );
   }
@@ -331,10 +333,10 @@ export const EntrepreneurProfile: React.FC = () => {
   if (!entrepreneur || entrepreneur.role !== 'entrepreneur') {
     return (
       <div className="text-center py-12">
-        <h2 className="text-2xl font-bold text-gray-900">Entrepreneur not found</h2>
-        <p className="text-gray-600 mt-2">The entrepreneur profile you're looking for doesn't exist or has been removed.</p>
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{t('Entrepreneur not found')}</h2>
+        <p className="text-gray-600 dark:text-gray-400 mt-2">{t("The entrepreneur profile you're looking for doesn't exist or has been removed.")}</p>
         <Link to="/dashboard/investor">
-          <Button variant="outline" className="mt-4">Back to Dashboard</Button>
+          <Button variant="outline" className="mt-4">{t('Back to Dashboard')}</Button>
         </Link>
       </div>
     );
@@ -358,25 +360,25 @@ export const EntrepreneurProfile: React.FC = () => {
             />
             
             <div className="mt-4 sm:mt-0 text-center sm:text-left">
-              <h1 className="text-2xl font-bold text-gray-900">{entrepreneur.name}</h1>
-              <p className="text-gray-605 flex items-center justify-center sm:justify-start mt-1">
-                <Building2 size={16} className="mr-1 text-gray-500" />
-                Founder at {entrepreneur.startupName || 'Startup'}
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{entrepreneur.name}</h1>
+              <p className="text-gray-600 dark:text-gray-400 flex items-center justify-center sm:justify-start mt-1">
+                <Building2 size={16} className="mr-1 text-gray-500 dark:text-gray-400" />
+                {t('Founder at')} {entrepreneur.startupName || t('Startup')}
               </p>
               
               <div className="flex flex-wrap gap-2 justify-center sm:justify-start mt-3">
-                <Badge variant="primary">{entrepreneur.industry || 'Industry'}</Badge>
+                <Badge variant="primary">{entrepreneur.industry || t('Industry')}</Badge>
                 <Badge variant="gray">
                   <MapPin size={14} className="mr-1" />
-                  {entrepreneur.location || 'Location'}
+                  {entrepreneur.location || t('Location')}
                 </Badge>
                 <Badge variant="accent">
                   <Calendar size={14} className="mr-1" />
-                  Founded {entrepreneur.foundedYear}
+                  {t('Founded')} {entrepreneur.foundedYear}
                 </Badge>
                 <Badge variant="secondary">
                   <Users size={14} className="mr-1" />
-                  {entrepreneur.teamSize} team members
+                  {entrepreneur.teamSize} {t('team members')}
                 </Badge>
               </div>
             </div>
@@ -390,7 +392,7 @@ export const EntrepreneurProfile: React.FC = () => {
                     variant="outline"
                     leftIcon={<MessageCircle size={18} />}
                   >
-                    Message
+                    {t('Message')}
                   </Button>
                 </Link>
                 
@@ -400,7 +402,7 @@ export const EntrepreneurProfile: React.FC = () => {
                     disabled={hasRequestedCollaboration}
                     onClick={handleSendRequest}
                   >
-                    {hasRequestedCollaboration ? 'Request Sent' : 'Request Collaboration'}
+                    {hasRequestedCollaboration ? t('Request Sent') : t('Request Collaboration')}
                   </Button>
                 )}
               </>
@@ -412,7 +414,7 @@ export const EntrepreneurProfile: React.FC = () => {
                 leftIcon={<UserCircle size={18} />}
                 onClick={openEditModal}
               >
-                Edit Profile
+                {t('Edit Profile')}
               </Button>
             )}
           </div>
@@ -425,31 +427,31 @@ export const EntrepreneurProfile: React.FC = () => {
           {/* About */}
           <Card>
             <CardHeader>
-              <h2 className="text-lg font-medium text-gray-900">About</h2>
+              <h2 className="text-lg font-medium text-gray-900 dark:text-white">{t('About')}</h2>
             </CardHeader>
             <CardBody>
-              <p className="text-gray-750 leading-relaxed whitespace-pre-wrap">{entrepreneur.bio || 'No bio written yet.'}</p>
+              <p className="text-gray-750 leading-relaxed whitespace-pre-wrap">{entrepreneur.bio || t('No bio written yet.')}</p>
             </CardBody>
           </Card>
           
           {/* Startup Description */}
           <Card>
             <CardHeader>
-              <h2 className="text-lg font-medium text-gray-900">Startup Overview</h2>
+              <h2 className="text-lg font-medium text-gray-900 dark:text-white">{t('Startup Overview')}</h2>
             </CardHeader>
             <CardBody>
               <div className="space-y-4">
                 <div>
-                  <h3 className="text-md font-medium text-gray-900">Pitch & Solution</h3>
+                  <h3 className="text-md font-medium text-gray-900 dark:text-white">{t('Pitch & Solution')}</h3>
                   <p className="text-gray-750 leading-relaxed mt-1 whitespace-pre-wrap">
-                    {entrepreneur.pitchSummary || 'No pitch summary available.'}
+                    {entrepreneur.pitchSummary || t('No pitch summary available.')}
                   </p>
                 </div>
                 
                 <div>
-                  <h3 className="text-md font-medium text-gray-900">Market Opportunity</h3>
+                  <h3 className="text-md font-medium text-gray-900 dark:text-white">{t('Market Opportunity')}</h3>
                   <p className="text-gray-750 mt-1 leading-relaxed">
-                    The {entrepreneur.industry || 'targeted'} market is experiencing significant growth. Our solution directly addresses key pain points in this expanding segment, positioning us for competitive acceleration.
+                    {t('marketOpportunityText', { industry: entrepreneur.industry || t('Industry') })}
                   </p>
                 </div>
               </div>
@@ -459,8 +461,8 @@ export const EntrepreneurProfile: React.FC = () => {
           {/* Team */}
           <Card>
             <CardHeader className="flex justify-between items-center">
-              <h2 className="text-lg font-medium text-gray-900">Team</h2>
-              <span className="text-sm text-gray-500">{entrepreneur.teamSize} members</span>
+              <h2 className="text-lg font-medium text-gray-900 dark:text-white">{t('Team')}</h2>
+              <span className="text-sm text-gray-500">{entrepreneur.teamSize} {t('members')}</span>
             </CardHeader>
             <CardBody>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -472,8 +474,8 @@ export const EntrepreneurProfile: React.FC = () => {
                     className="mr-3"
                   />
                   <div>
-                    <h3 className="text-sm font-medium text-gray-900">{entrepreneur.name}</h3>
-                    <p className="text-xs text-gray-500">Founder & CEO</p>
+                    <h3 className="text-sm font-medium text-gray-900 dark:text-white">{entrepreneur.name}</h3>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{t('Founder & CEO')}</p>
                   </div>
                 </div>
                 
@@ -485,14 +487,14 @@ export const EntrepreneurProfile: React.FC = () => {
                     className="mr-3"
                   />
                   <div>
-                    <h3 className="text-sm font-medium text-gray-900">Alex Johnson</h3>
-                    <p className="text-xs text-gray-500">CTO</p>
+                    <h3 className="text-sm font-medium text-gray-900 dark:text-white">Alex Johnson</h3>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">CTO</p>
                   </div>
                 </div>
                 
                 {entrepreneur.teamSize > 2 && (
-                  <div className="flex items-center justify-center p-3 border border-dashed border-gray-200 rounded-lg bg-gray-50/10">
-                    <p className="text-sm text-gray-500">+ {entrepreneur.teamSize - 2} more team members</p>
+                  <div className="flex items-center justify-center p-3 border border-dashed border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50/10">
+                    <p className="text-sm text-gray-500 dark:text-gray-400">+ {entrepreneur.teamSize - 2} {t('more team members')}</p>
                   </div>
                 )}
               </div>
@@ -505,29 +507,29 @@ export const EntrepreneurProfile: React.FC = () => {
           {/* Funding Details */}
           <Card>
             <CardHeader>
-              <h2 className="text-lg font-medium text-gray-900">{t('Funding')}</h2>
+              <h2 className="text-lg font-medium text-gray-900 dark:text-white">{t('Funding')}</h2>
             </CardHeader>
             <CardBody>
               <div className="space-y-4">
                 <div>
-                  <span className="text-sm text-gray-500">{t('Current Round Goal')}</span>
+                  <span className="text-sm text-gray-500 dark:text-gray-400">{t('Current Round Goal')}</span>
                   <div className="flex items-center mt-1">
-                    <p className="text-lg font-semibold text-gray-900">
+                    <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                       {entrepreneur.fundingNeeded ? formatStringCurrency(entrepreneur.fundingNeeded) : t('Undisclosed')}
                     </p>
                   </div>
                 </div>
                 
                 <div>
-                  <span className="text-sm text-gray-500">{t('Valuation Range')}</span>
-                  <p className="text-md font-medium text-gray-900">
+                  <span className="text-sm text-gray-500 dark:text-gray-400">{t('Valuation Range')}</span>
+                  <p className="text-md font-medium text-gray-900 dark:text-gray-100">
                     {formatStringCurrency('$8M')} - {formatStringCurrency('$12M')}
                   </p>
                 </div>
                 
                 <div>
-                  <span className="text-sm text-gray-500">{t('Previous Funding')}</span>
-                  <p className="text-md font-medium text-gray-900">
+                  <span className="text-sm text-gray-500 dark:text-gray-400">{t('Previous Funding')}</span>
+                  <p className="text-md font-medium text-gray-900 dark:text-gray-100">
                     {formatStringCurrency('$750K')} {t('Seed')} (2022)
                   </p>
                 </div>
@@ -538,17 +540,17 @@ export const EntrepreneurProfile: React.FC = () => {
           {/* Documents */}
           <Card>
             <CardHeader>
-              <h2 className="text-lg font-medium text-gray-900">Documents</h2>
+              <h2 className="text-lg font-medium text-gray-900 dark:text-white">{t('Documents')}</h2>
             </CardHeader>
             <CardBody>
               <div className="space-y-3">
-                <div className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                  <div className="p-2 bg-primary-50 rounded-md mr-3">
-                    <FileText size={18} className="text-primary-700" />
+                <div className="flex items-center p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                  <div className="p-2 bg-primary-50 dark:bg-primary-900/30 rounded-md mr-3">
+                    <FileText size={18} className="text-primary-700 dark:text-primary-400" />
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-sm font-medium text-gray-900">Pitch Deck</h3>
-                    <p className="text-xs text-gray-500">Updated 2 months ago</p>
+                    <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">Pitch Deck</h3>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Updated 2 months ago</p>
                   </div>
                   <Button variant="outline" size="sm">View</Button>
                 </div>
@@ -561,14 +563,14 @@ export const EntrepreneurProfile: React.FC = () => {
       {/* Edit Profile Modal Dialog */}
       {isEditing && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-gray-155 animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-gray-155 dark:border-gray-800 animate-in fade-in zoom-in-95 duration-200">
             <form onSubmit={handleSave}>
-              <div className="px-6 py-4 border-b border-gray-150 flex justify-between items-center bg-gray-50/50">
-                <h3 className="text-lg font-semibold text-gray-900">Edit Profile Details</h3>
+              <div className="px-6 py-4 border-b border-gray-150 dark:border-gray-800 flex justify-between items-center bg-gray-50/50 dark:bg-gray-800/50">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Edit Profile Details</h3>
                 <button 
                   type="button" 
                   onClick={() => setIsEditing(false)}
-                  className="text-gray-450 hover:text-gray-700 text-2xl font-semibold transition-colors"
+                  className="text-gray-450 hover:text-gray-700 dark:hover:text-gray-300 text-2xl font-semibold transition-colors"
                 >
                   &times;
                 </button>
@@ -576,21 +578,21 @@ export const EntrepreneurProfile: React.FC = () => {
               
               <div className="p-6 space-y-4">
                 {/* File Upload Selector */}
-                <div className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg border border-gray-150">
+                <div className="flex items-center space-x-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-150 dark:border-gray-700">
                   <Avatar
                     src={editAvatarUrl}
                     alt="Preview"
                     size="xl"
                   />
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Profile Picture / Icon
                     </label>
                     <input
                       type="file"
                       accept="image/*"
                       onChange={handleFileChange}
-                      className="text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100 cursor-pointer"
+                      className="text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary-50 dark:file:bg-primary-900/30 file:text-primary-700 dark:file:text-primary-300 hover:file:bg-primary-100 dark:hover:file:bg-primary-900/50 cursor-pointer"
                     />
                     {isUploading && (
                       <p className="text-xs text-primary-600 mt-1 animate-pulse">Uploading image...</p>
@@ -655,31 +657,31 @@ export const EntrepreneurProfile: React.FC = () => {
                 />
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Bio
                   </label>
                   <textarea
                     value={editBio}
                     onChange={(e) => setEditBio(e.target.value)}
                     rows={3}
-                    className="block w-full rounded-lg border-gray-300 border px-3 py-2 shadow-sm focus:border-primary-500 focus:ring-primary-500/20 focus:ring-4 transition-all duration-200 sm:text-sm focus:outline-none hover:border-gray-400"
+                    className="block w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white border px-3 py-2 shadow-sm focus:border-primary-500 focus:ring-primary-500/20 focus:ring-4 transition-all duration-200 sm:text-sm focus:outline-none hover:border-gray-400 dark:hover:border-gray-600"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Pitch Summary / Solution Details
                   </label>
                   <textarea
                     value={editPitchSummary}
                     onChange={(e) => setEditPitchSummary(e.target.value)}
                     rows={4}
-                    className="block w-full rounded-lg border-gray-300 border px-3 py-2 shadow-sm focus:border-primary-500 focus:ring-primary-500/20 focus:ring-4 transition-all duration-200 sm:text-sm focus:outline-none hover:border-gray-400"
+                    className="block w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white border px-3 py-2 shadow-sm focus:border-primary-500 focus:ring-primary-500/20 focus:ring-4 transition-all duration-200 sm:text-sm focus:outline-none hover:border-gray-400 dark:hover:border-gray-600"
                   />
                 </div>
               </div>
               
-              <div className="px-6 py-4 border-t border-gray-150 flex justify-end space-x-2 bg-gray-50/50">
+              <div className="px-6 py-4 border-t border-gray-150 dark:border-gray-800 flex justify-end space-x-2 bg-gray-50/50 dark:bg-gray-800/50">
                 <Button
                   type="button"
                   variant="outline"

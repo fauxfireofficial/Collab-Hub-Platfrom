@@ -40,7 +40,7 @@ export const Sidebar: React.FC = () => {
   // Define sidebar items based on user role
   const entrepreneurItems = [
     { to: '/dashboard/entrepreneur', icon: <Home size={20} />, text: 'Dashboard' },
-    { to: '/profile/entrepreneur/' + user.id, icon: <Building2 size={20} />, text: 'My Startup' },
+    { to: '/profile', icon: <Building2 size={20} />, text: 'My Startup' },
     { to: '/investors', icon: <CircleDollarSign size={20} />, text: 'Find Investors' },
     { to: '/chat', icon: <MessageCircle size={20} />, text: 'Messages' },
     { to: '/meetings', icon: <Calendar size={20} />, text: 'Meetings & Calendar' },
@@ -50,7 +50,7 @@ export const Sidebar: React.FC = () => {
   
   const investorItems = [
     { to: '/dashboard/investor', icon: <Home size={20} />, text: 'Dashboard' },
-    { to: '/profile/investor/' + user.id, icon: <CircleDollarSign size={20} />, text: 'My Portfolio' },
+    { to: '/profile', icon: <CircleDollarSign size={20} />, text: 'My Portfolio' },
     { to: '/entrepreneurs', icon: <Users size={20} />, text: 'Find Startups' },
     { to: '/chat', icon: <MessageCircle size={20} />, text: 'Messages' },
     { to: '/meetings', icon: <Calendar size={20} />, text: 'Meetings & Calendar' },
@@ -101,8 +101,8 @@ export const Sidebar: React.FC = () => {
         
         <div className="p-4 border-t border-gray-200 dark:border-gray-700">
           <div className="bg-gray-50 dark:bg-gray-900/50 rounded-md p-3">
-            <p className="text-xs text-gray-600 dark:text-gray-400">Need assistance?</p>
-            <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mt-1">Contact Support</h4>
+            <p className="text-xs text-gray-600 dark:text-gray-400">{t('Need assistance?')}</p>
+            <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mt-1">{t('Contact Support')}</h4>
             <a 
               href="mailto:support@businessnexus.com" 
               className="mt-2 inline-flex items-center text-xs font-medium text-primary-600 dark:text-primary-400 hover:text-primary-500"

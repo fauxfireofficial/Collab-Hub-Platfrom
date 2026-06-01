@@ -1,9 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Send, Phone, Video, Info, ArrowLeft, Paperclip, FileSpreadsheet, Scale, Image as ImageIcon, FileText, X, Loader2, Mic, Trash2, Play, Pause } from 'lucide-react';
+import { 
+  Send, Phone, Video, Info, ArrowLeft, Paperclip, FileSpreadsheet, 
+  Scale, Image as ImageIcon, FileText, X, Loader2, Mic, Trash2, 
+  Play, Pause, CheckCircle, CircleDollarSign, Layers, Lock, ShieldCheck, Briefcase 
+} from 'lucide-react';
 import { Avatar } from '../../components/ui/Avatar';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
+import { Card, CardHeader, CardBody } from '../../components/ui/Card';
 import { ChatMessage } from '../../components/chat/ChatMessage';
 import { ChatUserList } from '../../components/chat/ChatUserList';
 import { useAuth } from '../../context/AuthContext';
@@ -15,6 +20,7 @@ import { io, Socket } from 'socket.io-client';
 import { IncomingCallModal } from '../../components/chat/IncomingCallModal';
 import { CallInterface } from '../../components/chat/CallInterface';
 import toast from 'react-hot-toast';
+import { format } from 'date-fns';
 
 const SIGNALING_URL = import.meta.env.VITE_API_BASE || 'http://localhost:5000';
 
@@ -30,6 +36,29 @@ export const ChatPage: React.FC = () => {
   const messagesContainerRef = useRef<null | HTMLDivElement>(null);
   const isAtBottomRef = useRef(true); // track if user is scrolled near bottom
   const [chatPartner, setChatPartner] = useState<any | null>(null);
+
+  // Info Sidebar State
+  const [showInfoPanel, setShowInfoPanel] = useState(false);
+
+  // Direct Payment States
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [isEscrow, setIsEscrow] = useState(false);
+  const [agreementAccepted, setAgreementAccepted] = useState(false);
+  const [milestoneTitle, setMilestoneTitle] = useState('');
+  const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
+
+  // Payment Receipt Modal States
+  const [showReceipt, setShowReceipt] = useState(false);
+  const [receiptData, setReceiptData] = useState<{
+    id: string;
+    type: 'deposit' | 'withdraw' | 'transfer' | 'escrow';
+    amount: number;
+    recipientName?: string;
+    senderName?: string;
+    date: string;
+    status: string;
+  } | null>(null);
   
   // Call States
   const [socket, setSocket] = useState<Socket | null>(null);
@@ -42,7 +71,7 @@ export const ChatPage: React.FC = () => {
   const [recordingTime, setRecordingTime] = useState(0);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const shouldSendRef = useRef(false);
 
   // File Upload / Attachment States
@@ -57,6 +86,213 @@ export const ChatPage: React.FC = () => {
   const [previewIsVideo, setPreviewIsVideo] = useState(false);
   const [captionText, setCaptionText] = useState('');
   const [isSendingMedia, setIsSendingMedia] = useState(false);
+
+  const downloadReceiptImage = () => {
+    if (!receiptData) return;
+    const canvas = document.createElement('canvas');
+    canvas.width = 600;
+    canvas.height = 800;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Check theme
+    const isDark = document.documentElement.classList.contains('dark') || document.body.classList.contains('dark');
+
+    // Theme variables
+    const bgGradStart = isDark ? '#1e1b4b' : '#f5f3ff';
+    const bgGradEnd = isDark ? '#0f172a' : '#eff6ff';
+    const outerBorder = isDark ? 'rgba(99, 102, 241, 0.2)' : 'rgba(99, 102, 241, 0.15)';
+    const cardBg = isDark ? 'rgba(255, 255, 255, 0.04)' : '#ffffff';
+    const cardBorder = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(99, 102, 241, 0.1)';
+    const brandColor = isDark ? '#6366f1' : '#4f46e5';
+    const brandText = isDark ? '#ffffff' : '#1e1b4b';
+    const taglineText = isDark ? 'rgba(255, 255, 255, 0.4)' : 'rgba(30, 27, 75, 0.5)';
+    const successBg = isDark ? '#10b981' : '#059669';
+    const amountText = isDark ? '#ffffff' : '#0f172a';
+    const labelText = isDark ? 'rgba(255, 255, 255, 0.5)' : 'rgba(15, 23, 42, 0.55)';
+    const valueText = isDark ? '#ffffff' : '#1e293b';
+    const dividerColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.06)';
+    const footerText = isDark ? 'rgba(255, 255, 255, 0.3)' : 'rgba(15, 23, 42, 0.4)';
+
+    // 1. Draw modern gradient background
+    const gradient = ctx.createLinearGradient(0, 0, 0, 800);
+    gradient.addColorStop(0, bgGradStart);
+    gradient.addColorStop(1, bgGradEnd);
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 600, 800);
+
+    // 2. Draw outer border/decorations
+    ctx.strokeStyle = outerBorder;
+    ctx.lineWidth = 10;
+    ctx.strokeRect(15, 15, 570, 770);
+
+    // 3. Draw Branding Logo
+    ctx.fillStyle = brandColor;
+    ctx.beginPath();
+    ctx.arc(300, 85, 25, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Letter inside logo mark
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 24px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('N', 300, 93);
+    
+    ctx.fillStyle = brandText;
+    ctx.font = 'bold 24px Inter, sans-serif';
+    ctx.fillText('NEXUS', 300, 150);
+    
+    ctx.fillStyle = taglineText;
+    ctx.font = '12px Inter, sans-serif';
+    ctx.fillText('SECURE PAYMENTS & ESCROW', 300, 172);
+
+    // 4. Draw Receipt Box card background
+    ctx.fillStyle = cardBg;
+    ctx.beginPath();
+    if (ctx.roundRect) {
+      ctx.roundRect(50, 200, 500, 480, 20);
+    } else {
+      ctx.rect(50, 200, 500, 480);
+    }
+    ctx.fill();
+    ctx.strokeStyle = cardBorder;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // 5. Draw Success Checkmark
+    ctx.fillStyle = successBg;
+    ctx.beginPath();
+    ctx.arc(300, 250, 30, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // draw white check mark
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 4;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(288, 250);
+    ctx.lineTo(297, 259);
+    ctx.lineTo(314, 241);
+    ctx.stroke();
+
+    ctx.fillStyle = successBg;
+    ctx.font = 'bold 16px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('TRANSACTION SUCCESSFUL', 300, 305);
+
+    // 6. Draw Transaction Amount
+    ctx.fillStyle = amountText;
+    ctx.font = 'bold 36px Inter, sans-serif';
+    const formattedAmt = `$${receiptData.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+    ctx.fillText(formattedAmt, 300, 355);
+
+    // 7. Draw Divider
+    ctx.strokeStyle = dividerColor;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(80, 385);
+    ctx.lineTo(520, 385);
+    ctx.stroke();
+
+    // 8. Draw Details
+    const details = [
+      { label: 'TRANSACTION ID', value: receiptData.id },
+      { label: 'DATE & TIME', value: receiptData.date },
+      { label: 'TYPE', value: receiptData.type.toUpperCase() },
+      { label: 'SENDER', value: receiptData.senderName || 'N/A' },
+      { label: 'RECIPIENT', value: receiptData.recipientName || 'N/A' },
+      { label: 'STATUS', value: receiptData.status.toUpperCase() }
+    ];
+
+    ctx.textAlign = 'left';
+    let y = 430;
+    details.forEach(item => {
+      ctx.fillStyle = labelText;
+      ctx.font = 'bold 12px Inter, sans-serif';
+      ctx.fillText(item.label, 90, y);
+
+      ctx.fillStyle = valueText;
+      ctx.font = '14px Inter, sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText(item.value, 510, y);
+      ctx.textAlign = 'left';
+
+      y += 42;
+    });
+
+    // 9. Draw Footer
+    ctx.textAlign = 'center';
+    ctx.fillStyle = footerText;
+    ctx.font = '11px Inter, sans-serif';
+    ctx.fillText('Thank you for using Nexus. This receipt is automatically generated.', 300, 745);
+
+    // 10. Download
+    const link = document.createElement('a');
+    link.download = `receipt_${receiptData.id}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  };
+
+  const handleDirectPayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!chatPartner || !currentUser) return;
+    
+    if (currentUser.role === 'investor' && !agreementAccepted) {
+      toast.error('You must accept the Terms of Investment.');
+      return;
+    }
+
+    setIsSubmittingPayment(true);
+    try {
+      const amountInUSD = parseFloat(paymentAmount);
+      if (isNaN(amountInUSD) || amountInUSD <= 0) {
+        toast.error('Please enter a valid amount.');
+        return;
+      }
+      
+      const idempotencyKey = 'chat_' + Math.random().toString(36).substring(2, 11) + Date.now();
+      const sendEscrow = currentUser.role === 'investor' ? isEscrow : false;
+      const sendAgreement = currentUser.role === 'investor' ? agreementAccepted : true;
+      
+      const response = await api.post('/payments/transfer', { 
+        recipientId: chatPartner.id || chatPartner._id, 
+        amount: amountInUSD,
+        isEscrow: sendEscrow,
+        agreementAccepted: sendAgreement,
+        milestoneTitle: sendEscrow ? milestoneTitle || undefined : undefined,
+        idempotencyKey
+      });
+      
+      if (sendEscrow) {
+        toast.success(`Escrow initialized: held $${amountInUSD.toLocaleString()} until milestone release.`);
+      } else {
+        toast.success(`Successfully transferred $${amountInUSD.toLocaleString()}!`);
+      }
+      
+      const tx = response.data.transaction;
+      
+      setReceiptData({
+        id: tx?.id || tx?._id || 'txf_' + Math.random().toString(36).substring(2, 6),
+        type: tx?.type || (sendEscrow ? 'escrow' : 'transfer'),
+        amount: amountInUSD,
+        recipientName: chatPartner.startupName ? `${chatPartner.name} (${chatPartner.startupName})` : chatPartner.name,
+        senderName: currentUser.name,
+        date: format(new Date(tx?.createdAt || Date.now()), 'dd MMM yyyy, hh:mm a'),
+        status: tx?.status || 'completed'
+      });
+
+      setShowPaymentModal(false);
+      setPaymentAmount('');
+      setIsEscrow(false);
+      setAgreementAccepted(false);
+      setMilestoneTitle('');
+      setShowReceipt(true);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Payment transfer failed.');
+    } finally {
+      setIsSubmittingPayment(false);
+    }
+  };
 
   // Clean up object URL on modal close
   const closePreviewModal = () => {
@@ -688,9 +924,9 @@ export const ChatPage: React.FC = () => {
       {/* ───────────────────────────────────────────────── */}
       {/* Main Chat Layout                                 */}
       {/* ───────────────────────────────────────────────── */}
-      <div className="flex h-[calc(100vh-4rem)] bg-white border border-gray-200 rounded-lg overflow-hidden animate-fade-in">
+      <div className="flex h-[calc(100vh-4rem)] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg overflow-hidden animate-fade-in">
         {/* Conversations sidebar */}
-        <div className={`w-full md:w-1/3 lg:w-1/4 border-r border-gray-200 ${userId ? 'hidden md:block' : 'block'}`}>
+        <div className={`w-full md:w-1/3 lg:w-1/4 border-r border-gray-200 dark:border-gray-800 ${userId ? 'hidden md:block' : 'block'}`}>
           <ChatUserList conversations={conversations} />
         </div>
         
@@ -699,14 +935,14 @@ export const ChatPage: React.FC = () => {
           {/* Chat header */}
           {chatPartner ? (
             <>
-              <div className="border-b border-gray-200 p-4 flex justify-between items-center bg-white shadow-sm">
+              <div className="border-b border-gray-200 dark:border-gray-800 p-4 flex justify-between items-center bg-white dark:bg-gray-900 shadow-sm">
                 <div className="flex items-center">
                   <button 
                     onClick={() => navigate('/chat')}
-                    className="mr-3 p-1 rounded-full hover:bg-gray-100 md:hidden"
+                    className="mr-3 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 md:hidden"
                     aria-label="Back to messages"
                   >
-                    <ArrowLeft size={20} className="text-gray-600" />
+                    <ArrowLeft size={20} className="text-gray-600 dark:text-gray-400" />
                   </button>
                   <Avatar
                     src={chatPartner.avatarUrl}
@@ -717,8 +953,8 @@ export const ChatPage: React.FC = () => {
                   />
                   
                   <div>
-                    <h2 className="text-lg font-medium text-gray-900">{chatPartner.name}</h2>
-                    <p className="text-sm text-gray-500">
+                    <h2 className="text-lg font-medium text-gray-900 dark:text-white">{chatPartner.name}</h2>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
                       {chatPartner.isOnline ? t('Online') : t('Offline')}
                     </p>
                   </div>
@@ -748,8 +984,9 @@ export const ChatPage: React.FC = () => {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="rounded-full p-2"
+                    className={`rounded-full p-2 ${showInfoPanel ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400' : 'text-gray-550'}`}
                     aria-label="Info"
+                    onClick={() => setShowInfoPanel(!showInfoPanel)}
                   >
                     <Info size={18} />
                   </Button>
@@ -760,7 +997,7 @@ export const ChatPage: React.FC = () => {
               <div
                 ref={messagesContainerRef}
                 onScroll={handleMessagesScroll}
-                className="flex-1 p-4 overflow-y-auto bg-gray-50/50"
+                className="flex-1 p-4 overflow-y-auto bg-gray-50/50 dark:bg-gray-900/50"
               >
                 {messages.length > 0 ? (
                   <div className="space-y-4">
@@ -781,17 +1018,17 @@ export const ChatPage: React.FC = () => {
                   </div>
                 ) : (
                   <div className="h-full flex flex-col items-center justify-center">
-                    <div className="bg-gray-150 p-4 rounded-full mb-4">
-                      <MessageCircle size={32} className="text-gray-400" />
+                    <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-full mb-4">
+                      <MessageCircle size={32} className="text-gray-400 dark:text-gray-500" />
                     </div>
-                    <h3 className="text-lg font-medium text-gray-700">{t('No messages yet')}</h3>
-                    <p className="text-gray-500 mt-1">{t('Send a message to start the conversation')}</p>
+                    <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300">{t('No messages yet')}</h3>
+                    <p className="text-gray-500 dark:text-gray-400 mt-1">{t('Send a message to start the conversation')}</p>
                   </div>
                 )}
               </div>
               
               {/* Message input */}
-              <div className="border-t border-gray-200 p-4 bg-white relative">
+              <div className="border-t border-gray-200 dark:border-gray-800 p-4 bg-white dark:bg-gray-900 relative">
                 {/* Hidden file input */}
                 <input
                   type="file"
@@ -877,7 +1114,7 @@ export const ChatPage: React.FC = () => {
                           type="button"
                           variant="ghost"
                           size="sm"
-                          className={`rounded-full p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 ${showAttachmentMenu ? 'bg-gray-100 text-primary-600' : ''}`}
+                          className={`rounded-full p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 dark:hover:text-gray-300 ${showAttachmentMenu ? 'bg-gray-100 dark:bg-gray-800 text-primary-600 dark:text-primary-400' : ''}`}
                           onClick={() => setShowAttachmentMenu(!showAttachmentMenu)}
                           aria-label="Attach file"
                         >
@@ -886,7 +1123,7 @@ export const ChatPage: React.FC = () => {
 
                         {/* Dropdown Menu */}
                         {showAttachmentMenu && (
-                          <div className="absolute bottom-full left-0 mb-3 bg-white rounded-xl shadow-xl border border-gray-100 py-2 w-64 z-50 origin-bottom-left transition-all">
+                          <div className="absolute bottom-full left-0 mb-3 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 py-2 w-64 z-50 origin-bottom-left transition-all">
                             <div className="px-4 py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wider">
                               {t('Send Attachment')}
                             </div>
@@ -971,18 +1208,335 @@ export const ChatPage: React.FC = () => {
               </div>
             </>
           ) : (
-            <div className="h-full flex flex-col items-center justify-center p-4 bg-gray-50/20">
-              <div className="bg-gray-100 p-6 rounded-full mb-4">
-                <MessageCircle size={48} className="text-gray-400" />
+            <div className="h-full flex flex-col items-center justify-center p-4 bg-gray-50/20 dark:bg-gray-900/50">
+              <div className="bg-gray-100 dark:bg-gray-800 p-6 rounded-full mb-4">
+                <MessageCircle size={48} className="text-gray-400 dark:text-gray-500" />
               </div>
-              <h2 className="text-xl font-medium text-gray-700">{t('Select a conversation')}</h2>
-              <p className="text-gray-500 mt-2 text-center max-w-xs">
+              <h2 className="text-xl font-medium text-gray-700 dark:text-gray-300">{t('Select a conversation')}</h2>
+              <p className="text-gray-500 dark:text-gray-400 mt-2 text-center max-w-xs">
                 {t('Choose a contact from the sidebar or request connection to start a chat.')}
               </p>
             </div>
           )}
         </div>
+
+        {/* Info panel */}
+        {showInfoPanel && chatPartner && (
+          <div className="w-80 border-l border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 flex flex-col h-full overflow-hidden shrink-0 animate-fade-in">
+            {/* Header */}
+            <div className="p-4 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center bg-gray-50/50 dark:bg-gray-900/50">
+              <h3 className="font-semibold text-gray-900 dark:text-white text-xs uppercase tracking-wider">{t('Contact Information')}</h3>
+              <button 
+                onClick={() => setShowInfoPanel(false)} 
+                className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            
+            {/* Content (Scrollable) */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              {/* Profile Header Card */}
+              <div className="text-center pb-6 border-b border-gray-100 dark:border-gray-800">
+                <div className="flex justify-center mb-3">
+                  <Avatar 
+                    src={chatPartner.avatarUrl || ''} 
+                    alt={chatPartner.name} 
+                    size="xl" 
+                    className="shadow-md ring-2 ring-indigo-100 dark:ring-indigo-900/50" 
+                  />
+                </div>
+                <h4 className="font-semibold text-lg text-gray-900 dark:text-white leading-snug">{chatPartner.name}</h4>
+                <div className="mt-1 flex items-center justify-center gap-1.5">
+                  <span className={`w-2 h-2 rounded-full ${chatPartner.isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400'}`}></span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400 capitalize">{chatPartner.role}</span>
+                </div>
+
+                {/* Send Payment Button */}
+                <Button 
+                  fullWidth 
+                  onClick={() => setShowPaymentModal(true)}
+                  className="mt-5 bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center gap-2 py-2 shadow-md shadow-indigo-600/10 rounded-lg text-sm font-medium"
+                >
+                  <CircleDollarSign size={16} />
+                  {t('Send Payment')}
+                </Button>
+              </div>
+
+              {/* Bio Section */}
+              <div className="space-y-2">
+                <h5 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('About')}</h5>
+                <p className="text-sm text-gray-650 dark:text-gray-300 leading-relaxed bg-gray-50/50 dark:bg-gray-950/40 p-3 rounded-lg border border-gray-100 dark:border-gray-800">
+                  {chatPartner.bio || t('No bio provided.')}
+                </p>
+              </div>
+
+              {/* Role-Specific details */}
+              {chatPartner.role === 'entrepreneur' ? (
+                <div className="space-y-4">
+                  <h5 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('Startup Details')}</h5>
+                  
+                  {chatPartner.startupName && (
+                    <div className="flex gap-3 items-start">
+                      <Briefcase size={16} className="text-indigo-500 shrink-0 mt-0.5" />
+                      <div>
+                        <div className="text-xs text-gray-400">{t('Company Name')}</div>
+                        <div className="text-sm font-semibold text-gray-800 dark:text-gray-250">{chatPartner.startupName}</div>
+                      </div>
+                    </div>
+                  )}
+
+                  {chatPartner.industry && (
+                    <div className="flex gap-3 items-start">
+                      <Layers size={16} className="text-indigo-500 shrink-0 mt-0.5" />
+                      <div>
+                        <div className="text-xs text-gray-400">{t('Industry')}</div>
+                        <div className="text-sm text-gray-800 dark:text-gray-250">{chatPartner.industry}</div>
+                      </div>
+                    </div>
+                  )}
+
+                  {chatPartner.fundingNeeded && (
+                    <div className="flex gap-3 items-start bg-indigo-50/30 dark:bg-indigo-950/10 border border-indigo-100/50 dark:border-indigo-900/30 p-3 rounded-lg">
+                      <CircleDollarSign size={16} className="text-indigo-650 dark:text-indigo-400 shrink-0 mt-0.5" />
+                      <div>
+                        <div className="text-xs text-indigo-600 dark:text-indigo-400 font-semibold">{t('Funding Needed')}</div>
+                        <div className="text-sm font-extrabold text-indigo-900 dark:text-white">${parseFloat(chatPartner.fundingNeeded).toLocaleString()}</div>
+                      </div>
+                    </div>
+                  )}
+
+                  {chatPartner.pitchSummary && (
+                    <div className="space-y-1">
+                      <div className="text-xs text-gray-400 font-medium">{t('Pitch Summary')}</div>
+                      <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed italic bg-gray-50/20 p-2.5 rounded border border-gray-100 dark:border-gray-800">
+                        "{chatPartner.pitchSummary}"
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                // Investor Details
+                <div className="space-y-4">
+                  <h5 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('Investment Profile')}</h5>
+                  
+                  {(chatPartner.minimumInvestment || chatPartner.maximumInvestment) && (
+                    <div className="flex gap-3 items-start bg-indigo-50/30 dark:bg-indigo-950/10 border border-indigo-100/50 dark:border-indigo-900/30 p-3 rounded-lg">
+                      <CircleDollarSign size={16} className="text-indigo-650 dark:text-indigo-400 shrink-0 mt-0.5" />
+                      <div>
+                        <div className="text-xs text-indigo-600 dark:text-indigo-400 font-semibold">{t('Investment Range')}</div>
+                        <div className="text-sm font-extrabold text-indigo-900 dark:text-white">
+                          ${parseFloat(chatPartner.minimumInvestment || '0').toLocaleString()} - ${parseFloat(chatPartner.maximumInvestment || '0').toLocaleString()}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {chatPartner.investmentStage && chatPartner.investmentStage.length > 0 && (
+                    <div className="space-y-1">
+                      <div className="text-xs text-gray-400">{t('Preferred Stages')}</div>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {chatPartner.investmentStage.map((s: string) => (
+                          <span key={s} className="px-2 py-0.5 bg-gray-100 dark:bg-gray-805 text-gray-600 dark:text-gray-300 rounded text-[10px] uppercase font-semibold">
+                            {s}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {chatPartner.investmentInterests && chatPartner.investmentInterests.length > 0 && (
+                    <div className="space-y-1">
+                      <div className="text-xs text-gray-400">{t('Interests')}</div>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {chatPartner.investmentInterests.map((interest: string) => (
+                          <span key={interest} className="px-2 py-0.5 bg-indigo-55/60 dark:bg-indigo-950/30 text-indigo-650 dark:text-indigo-400 rounded text-[10px] font-semibold">
+                            {interest}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Direct Payment / Transfer Modal */}
+      {showPaymentModal && chatPartner && (
+        <div className="fixed inset-0 bg-gray-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <Card className="w-full max-w-md shadow-2xl border-none">
+            <CardHeader className="flex justify-between items-center border-b border-gray-100 dark:border-gray-800 p-4">
+              <h3 className="font-semibold text-lg text-gray-900 dark:text-white">
+                {currentUser?.role === 'investor' ? 'Send Startup Investment' : 'Transfer Funds'}
+              </h3>
+              <button onClick={() => setShowPaymentModal(false)} className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+                <X size={20} />
+              </button>
+            </CardHeader>
+            <CardBody className="p-6">
+              <form onSubmit={handleDirectPayment} className="space-y-4">
+                {/* Recipient info panel */}
+                <div className="bg-gray-50 dark:bg-gray-950/60 p-3 rounded-lg flex items-center gap-3 border border-gray-100 dark:border-gray-800">
+                  <Avatar src={chatPartner.avatarUrl} alt={chatPartner.name} size="md" />
+                  <div className="leading-tight">
+                    <div className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Recipient</div>
+                    <div className="font-bold text-sm text-gray-900 dark:text-white">{chatPartner.name}</div>
+                    {chatPartner.startupName && <div className="text-xs text-gray-500">{chatPartner.startupName}</div>}
+                  </div>
+                </div>
+
+                <Input
+                  label="Amount to Transfer (USD)"
+                  type="number"
+                  placeholder="e.g. 5000"
+                  value={paymentAmount}
+                  onChange={(e) => setPaymentAmount(e.target.value)}
+                  required
+                  fullWidth
+                />
+
+                {/* Escrow and Terms Section for Investors */}
+                {currentUser?.role === 'investor' && (
+                  <div className="space-y-3 pt-3 border-t border-gray-100 dark:border-gray-800">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <label className="text-sm font-semibold text-gray-900 dark:text-white">Hold in Escrow</label>
+                        <p className="text-xs text-gray-500">Lock funds until proposed milestone completion.</p>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={isEscrow}
+                        onChange={(e) => setIsEscrow(e.target.checked)}
+                        className="w-4 h-4 rounded text-indigo-600 bg-gray-100 border-gray-300 focus:ring-indigo-500 focus:ring-2 focus:ring-offset-2"
+                      />
+                    </div>
+
+                    {isEscrow && (
+                      <Input
+                        label="Milestone/Escrow Agreement Title"
+                        placeholder="e.g. Prototype Development Milestone"
+                        value={milestoneTitle}
+                        onChange={(e) => setMilestoneTitle(e.target.value)}
+                        required
+                        fullWidth
+                      />
+                    )}
+
+                    <div className="flex gap-2 items-start bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/40 p-3 rounded-lg text-xs text-gray-600 dark:text-gray-300">
+                      <input
+                        type="checkbox"
+                        checked={agreementAccepted}
+                        onChange={(e) => setAgreementAccepted(e.target.checked)}
+                        className="w-3.5 h-3.5 rounded mt-0.5 shrink-0 accent-indigo-600"
+                        required
+                      />
+                      <label>
+                        I agree to the <span className="font-semibold text-indigo-600 dark:text-indigo-400 underline cursor-pointer">Terms of Startup Investment & Escrow Placement Policy</span>.
+                      </label>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex gap-3 border-t border-gray-100 dark:border-gray-800 pt-4">
+                  <Button variant="outline" type="button" fullWidth onClick={() => setShowPaymentModal(false)}>
+                    Cancel
+                  </Button>
+                  <Button 
+                    type="submit" 
+                    fullWidth 
+                    isLoading={isSubmittingPayment}
+                    disabled={currentUser?.role === 'investor' && !agreementAccepted}
+                  >
+                    Execute Transfer
+                  </Button>
+                </div>
+              </form>
+            </CardBody>
+          </Card>
+        </div>
+      )}
+
+      {/* Payment Receipt Modal */}
+      {showReceipt && receiptData && (
+        <div className="fixed inset-0 bg-gray-950/70 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <Card className="w-full max-w-md shadow-2xl border border-gray-100 dark:border-none bg-gradient-to-br from-white to-gray-50 dark:from-indigo-950 dark:to-slate-900 text-gray-900 dark:text-white relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-4">
+              <button 
+                onClick={() => setShowReceipt(false)} 
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            <CardBody className="p-8 text-center flex flex-col items-center">
+              {/* Branding */}
+              <div className="mb-4">
+                <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-500 rounded-full flex items-center justify-center mx-auto mb-2 shadow-sm dark:shadow-lg">
+                  <span className="font-bold text-indigo-600 dark:text-white text-xl">N</span>
+                </div>
+                <h4 className="font-bold text-lg tracking-wider text-gray-900 dark:text-white">NEXUS</h4>
+                <p className="text-[10px] text-indigo-500 dark:text-indigo-300 font-medium tracking-widest uppercase">Secure Payments & Escrow</p>
+              </div>
+
+              {/* Checkmark icon */}
+              <div className="w-16 h-16 bg-emerald-50 dark:bg-emerald-500/20 text-emerald-500 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30 rounded-full flex items-center justify-center mb-4 mt-2">
+                <CheckCircle size={32} className="animate-bounce" />
+              </div>
+              
+              <span className="text-emerald-600 dark:text-emerald-400 text-xs font-semibold tracking-wider uppercase mb-1">Transaction Successful</span>
+              <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white mb-6">
+                ${receiptData.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              </h2>
+
+              {/* Receipt Details Box */}
+              <div className="w-full bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl p-4 text-sm text-left space-y-3 mb-6 shadow-sm dark:shadow-none">
+                <div className="flex justify-between border-b border-gray-100 dark:border-white/5 pb-2">
+                  <span className="text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wider">Transaction ID</span>
+                  <span className="font-mono text-xs text-gray-900 dark:text-white select-all">{receiptData.id}</span>
+                </div>
+                <div className="flex justify-between border-b border-gray-100 dark:border-white/5 pb-2">
+                  <span className="text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wider">Date & Time</span>
+                  <span className="text-gray-900 dark:text-white text-xs">{receiptData.date}</span>
+                </div>
+                <div className="flex justify-between border-b border-gray-100 dark:border-white/5 pb-2">
+                  <span className="text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wider">Type</span>
+                  <span className="text-gray-900 dark:text-white font-semibold text-xs uppercase">{receiptData.type}</span>
+                </div>
+                <div className="flex justify-between border-b border-gray-100 dark:border-white/5 pb-2">
+                  <span className="text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wider">Sender</span>
+                  <span className="text-gray-900 dark:text-white text-xs">{receiptData.senderName || 'N/A'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wider">Recipient</span>
+                  <span className="text-gray-900 dark:text-white text-xs">{receiptData.recipientName || 'N/A'}</span>
+                </div>
+              </div>
+
+              <div className="w-full flex gap-3">
+                <Button 
+                  variant="outline" 
+                  fullWidth 
+                  onClick={() => setShowReceipt(false)}
+                  className="border-gray-300 dark:border-white/10 text-gray-700 dark:text-white hover:bg-gray-50 dark:hover:bg-white/5"
+                >
+                  Close
+                </Button>
+                <Button 
+                  fullWidth 
+                  onClick={downloadReceiptImage}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-600/30"
+                >
+                  Download Receipt
+                </Button>
+              </div>
+            </CardBody>
+          </Card>
+        </div>
+      )}
     </>
   );
 };

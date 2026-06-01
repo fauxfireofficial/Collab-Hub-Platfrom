@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Search, Filter, MapPin } from 'lucide-react';
 import { Input } from '../../components/ui/Input';
 import { Card, CardHeader, CardBody } from '../../components/ui/Card';
@@ -7,6 +8,7 @@ import { InvestorCard } from '../../components/investor/InvestorCard';
 import { investors } from '../../data/users';
 
 export const InvestorsPage: React.FC = () => {
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStages, setSelectedStages] = useState<string[]>([]);
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
@@ -52,8 +54,8 @@ export const InvestorsPage: React.FC = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Find Investors</h1>
-        <p className="text-gray-600">Connect with investors who match your startup's needs</p>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('Find Investors')}</h1>
+        <p className="text-gray-600 dark:text-gray-400">{t('Connect with investors who match your startup\'s needs')}</p>
       </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -61,11 +63,11 @@ export const InvestorsPage: React.FC = () => {
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <h2 className="text-lg font-medium text-gray-900">Filters</h2>
+              <h2 className="text-lg font-medium text-gray-900 dark:text-white">{t('Filters')}</h2>
             </CardHeader>
             <CardBody className="space-y-6">
               <div>
-                <h3 className="text-sm font-medium text-gray-900 mb-2">Investment Stage</h3>
+                <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">{t('Investment Stage')}</h3>
                 <div className="space-y-2">
                   {allStages.map(stage => (
                     <button
@@ -73,8 +75,8 @@ export const InvestorsPage: React.FC = () => {
                       onClick={() => toggleStage(stage)}
                       className={`block w-full text-left px-3 py-2 rounded-md text-sm ${
                         selectedStages.includes(stage)
-                          ? 'bg-primary-50 text-primary-700'
-                          : 'text-gray-700 hover:bg-gray-50'
+                          ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
+                          : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
                       }`}
                     >
                       {stage}
@@ -84,7 +86,7 @@ export const InvestorsPage: React.FC = () => {
               </div>
               
               <div>
-                <h3 className="text-sm font-medium text-gray-900 mb-2">Investment Interests</h3>
+                <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">{t('Investment Interests')}</h3>
                 <div className="flex flex-wrap gap-2">
                   {allInterests.map(interest => (
                     <Badge
@@ -100,17 +102,17 @@ export const InvestorsPage: React.FC = () => {
               </div>
               
               <div>
-                <h3 className="text-sm font-medium text-gray-900 mb-2">Location</h3>
+                <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">{t('Location')}</h3>
                 <div className="space-y-2">
-                  <button className="flex items-center w-full text-left px-3 py-2 rounded-md text-sm text-gray-700 hover:bg-gray-50">
+                  <button className="flex items-center w-full text-left px-3 py-2 rounded-md text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">
                     <MapPin size={16} className="mr-2" />
                     San Francisco, CA
                   </button>
-                  <button className="flex items-center w-full text-left px-3 py-2 rounded-md text-sm text-gray-700 hover:bg-gray-50">
+                  <button className="flex items-center w-full text-left px-3 py-2 rounded-md text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">
                     <MapPin size={16} className="mr-2" />
                     New York, NY
                   </button>
-                  <button className="flex items-center w-full text-left px-3 py-2 rounded-md text-sm text-gray-700 hover:bg-gray-50">
+                  <button className="flex items-center w-full text-left px-3 py-2 rounded-md text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">
                     <MapPin size={16} className="mr-2" />
                     Boston, MA
                   </button>
@@ -124,7 +126,7 @@ export const InvestorsPage: React.FC = () => {
         <div className="lg:col-span-3 space-y-6">
           <div className="flex items-center gap-4">
             <Input
-              placeholder="Search investors by name, interests, or keywords..."
+              placeholder={t('Search investors by name, interests, or keywords...')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               startAdornment={<Search size={18} />}
@@ -133,8 +135,8 @@ export const InvestorsPage: React.FC = () => {
             
             <div className="flex items-center gap-2">
               <Filter size={18} className="text-gray-500" />
-              <span className="text-sm text-gray-600">
-                {filteredInvestors.length} results
+              <span className="text-sm text-gray-600 dark:text-gray-400">
+                {filteredInvestors.length} {t('results')}
               </span>
             </div>
           </div>

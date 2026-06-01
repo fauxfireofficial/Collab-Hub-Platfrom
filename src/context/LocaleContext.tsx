@@ -89,6 +89,11 @@ export const LocaleProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   useEffect(() => {
+    i18n.changeLanguage(language);
+    document.documentElement.dir = (language === 'ar' || language === 'ur') ? 'rtl' : 'ltr';
+  }, []);
+
+  useEffect(() => {
     if (isAutoTimezone) {
       const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
       if (detected && detected !== timezone) {

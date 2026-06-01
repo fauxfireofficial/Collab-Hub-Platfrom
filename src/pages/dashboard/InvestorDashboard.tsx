@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { Users, PieChart, Filter, Search, PlusCircle } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
@@ -10,6 +11,7 @@ import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 
 export const InvestorDashboard: React.FC = () => {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIndustries, setSelectedIndustries] = useState<string[]>([]);
@@ -68,15 +70,13 @@ export const InvestorDashboard: React.FC = () => {
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Discover Startups</h1>
-          <p className="text-gray-600">Find and connect with promising entrepreneurs</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('Discover Startups')}</h1>
+          <p className="text-gray-600 dark:text-gray-400">{t('Find and connect with promising entrepreneurs')}</p>
         </div>
         
         <Link to="/entrepreneurs">
-          <Button
-            leftIcon={<PlusCircle size={18} />}
-          >
-            View All Startups
+          <Button leftIcon={<PlusCircle size={18} />}>
+            {t('View All Startups')}
           </Button>
         </Link>
       </div>
@@ -85,7 +85,7 @@ export const InvestorDashboard: React.FC = () => {
       <div className="flex flex-col md:flex-row gap-4">
         <div className="w-full md:w-2/3">
           <Input
-            placeholder="Search startups, industries, or keywords..."
+            placeholder={t('Search startups, industries, or keywords...')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             fullWidth
@@ -96,7 +96,7 @@ export const InvestorDashboard: React.FC = () => {
         <div className="w-full md:w-1/3">
           <div className="flex items-center space-x-2">
             <Filter size={18} className="text-gray-500" />
-            <span className="text-sm font-medium text-gray-700">Filter by:</span>
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('Filter by:')}</span>
             
             <div className="flex flex-wrap gap-2">
               {industries.map(industry => (

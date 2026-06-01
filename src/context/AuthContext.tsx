@@ -66,7 +66,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           email: error.response.data.email
         };
       }
-      const msg = error.response?.data?.message || 'Invalid credentials or user not found';
+      const msg = !error.response
+        ? 'Cannot reach the server. Make sure the backend is running on port 5000.'
+        : (error.response?.data?.message || 'Invalid credentials or user not found');
       toast.error(msg);
       throw new Error(msg);
     } finally {
