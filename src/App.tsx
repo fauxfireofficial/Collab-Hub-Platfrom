@@ -39,8 +39,8 @@ import { ChatPage } from './pages/chat/ChatPage';
 
 // New Full-Stack pages
 import { MeetingsPage } from './pages/meetings/MeetingsPage';
-import { VideoCallPage } from './pages/video/VideoCallPage';
 import { PaymentsPage } from './pages/payments/PaymentsPage';
+import { VideoCallPage } from './pages/video/VideoCallPage';
 
 // Smart root redirect based on auth state
 const RootRedirect = () => {
@@ -128,6 +128,7 @@ function App() {
           <Route path="/meetings" element={<DashboardLayout />}>
             <Route index element={<MeetingsPage />} />
           </Route>
+
 
           {/* Video Call Routes */}
           <Route path="/video-call/:roomId" element={<DashboardLayout />}>

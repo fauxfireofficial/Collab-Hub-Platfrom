@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import { Calendar as CalendarIcon, Clock, Video, User as UserIcon, Plus, Check, X, AlertCircle } from 'lucide-react';
 import { Card, CardHeader, CardBody } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -128,6 +129,20 @@ export const MeetingsPage: React.FC = () => {
       console.error('Failed to update meeting status:', error);
       const msg = error.response?.data?.message || 'Error updating status.';
       toast.error(msg);
+    }
+  };
+
+  const handleCancelMeeting = async (meetingId: string) => {
+    if (window.confirm(t('Are you sure you want to cancel this meeting?'))) {
+      try {
+        await api.delete(`/meetings/${meetingId}`);
+        toast.success(t('Meeting cancelled successfully!'));
+        fetchMeetings();
+      } catch (error: any) {
+        console.error('Failed to cancel meeting:', error);
+        const msg = error.response?.data?.message || 'Error cancelling meeting.';
+        toast.error(msg);
+      }
     }
   };
 
@@ -281,7 +296,7 @@ export const MeetingsPage: React.FC = () => {
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-2 self-end md:self-auto">
+                        <div className="flex items-center gap-2 self-end md:self-auto flex-wrap justify-end">
                           {/* Display Status Badge */}
                           {meeting.status === 'pending' && (
                             <Badge variant="warning">{t('Pending Approval')}</Badge>
@@ -314,13 +329,35 @@ export const MeetingsPage: React.FC = () => {
                             </div>
                           )}
 
-                          {/* Join Video Room button if accepted */}
+                          {/* Action controls for the organizer if pending */}
+                          {isOrganizer && meeting.status === 'pending' && (
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-error-600 hover:bg-red-50 dark:hover:bg-red-950/20 border-red-200 dark:border-red-800"
+                              onClick={() => handleCancelMeeting(meeting.id)}
+                            >
+                              {t('Cancel')}
+                            </Button>
+                          )}
+
+                          {/* Action controls for accepted meetings */}
                           {meeting.status === 'accepted' && (
-                            <a href={meeting.roomUrl}>
-                              <Button size="sm" leftIcon={<Video size={16} />}>
-                                {t('Join Video')}
+                            <div className="flex gap-2">
+                              <Link to={meeting.roomUrl}>
+                                <Button size="sm" leftIcon={<Video size={16} />}>
+                                  {t('Join Meeting')}
+                                </Button>
+                              </Link>
+                              <Button 
+                                size="sm" 
+                                variant="outline" 
+                                className="text-error-600 hover:bg-red-50 dark:hover:bg-red-950/20 border-red-200 dark:border-red-800"
+                                onClick={() => handleCancelMeeting(meeting.id)}
+                              >
+                                {t('Cancel')}
                               </Button>
-                            </a>
+                            </div>
                           )}
                         </div>
                       </div>
@@ -352,19 +389,19 @@ export const MeetingsPage: React.FC = () => {
                     const startTimeDate = new Date(meeting.startTime);
 
                     return (
-                      <div key={meeting.id} className="p-3 bg-gray-50 rounded-lg text-xs space-y-1">
+                      <div key={meeting.id} className="p-3 bg-gray-50 dark:bg-gray-950/40 rounded-lg text-xs space-y-1 border border-gray-100 dark:border-gray-800/80">
                         <div className="flex justify-between items-center">
-                          <h4 className="font-semibold text-gray-800 truncate">{meeting.title}</h4>
-                          <span className="capitalize text-gray-500">
+                          <h4 className="font-semibold text-gray-800 dark:text-gray-200 truncate">{meeting.title}</h4>
+                          <span className="capitalize text-gray-500 dark:text-gray-400">
                             {meeting.status === 'rejected' ? (
-                              <span className="text-error-600">{t('Declined')}</span>
+                              <span className="text-error-600 dark:text-red-400 font-semibold">{t('Declined')}</span>
                             ) : (
                               t('Completed')
                             )}
                           </span>
                         </div>
-                        <p className="text-gray-500">{format(startTimeDate, 'PPp')}</p>
-                        <p className="text-gray-600 font-medium">{t('With')} {partner?.name}</p>
+                        <p className="text-gray-500 dark:text-gray-400">{format(startTimeDate, 'PPp')}</p>
+                        <p className="text-gray-650 dark:text-gray-300 font-medium">{t('With')} {partner?.name}</p>
                       </div>
                     );
                   })}

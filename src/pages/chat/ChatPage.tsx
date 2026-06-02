@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
-  Send, Phone, Video, Info, ArrowLeft, Paperclip, FileSpreadsheet, 
+  Send, Video, Info, ArrowLeft, Paperclip, FileSpreadsheet, 
   Scale, Image as ImageIcon, FileText, X, Loader2, Mic, Trash2, 
-  Play, Pause, CheckCircle, CircleDollarSign, Layers, Lock, ShieldCheck, Briefcase 
+  Play, Pause, CheckCircle, CircleDollarSign, Layers, Lock, ShieldCheck, Briefcase, Calendar
 } from 'lucide-react';
 import { Avatar } from '../../components/ui/Avatar';
 import { Button } from '../../components/ui/Button';
@@ -17,8 +17,6 @@ import { Message } from '../../types';
 import api from '../../services/api';
 import { MessageCircle } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
-import { IncomingCallModal } from '../../components/chat/IncomingCallModal';
-import { CallInterface } from '../../components/chat/CallInterface';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 
@@ -60,10 +58,18 @@ export const ChatPage: React.FC = () => {
     status: string;
   } | null>(null);
   
-  // Call States
+  // Call/Socket States
   const [socket, setSocket] = useState<Socket | null>(null);
-  const [incomingCall, setIncomingCall] = useState<any>(null);
-  const [activeCall, setActiveCall] = useState<{ channelName: string; partnerName: string; partnerAvatar?: string; callType: 'audio' | 'video'; token?: string | null; isCaller: boolean; partnerId: string } | null>(null);
+
+  // Meeting Booking States in Info Panel
+  const [showBookForm, setShowBookForm] = useState(false);
+  const [meetingTitle, setMeetingTitle] = useState('');
+  const [meetingDesc, setMeetingDesc] = useState('');
+  const [meetingDate, setMeetingDate] = useState('');
+  const [meetingStartTime, setMeetingStartTime] = useState('');
+  const [meetingEndTime, setMeetingEndTime] = useState('');
+  const [isBooking, setIsBooking] = useState(false);
+  const [partnerMeeting, setPartnerMeeting] = useState<any | null>(null);
   
   // Voice Recording States
   const [isRecording, setIsRecording] = useState(false);
@@ -566,6 +572,21 @@ export const ChatPage: React.FC = () => {
     }
   };
 
+  const fetchActiveMeeting = async () => {
+    if (!userId) return;
+    try {
+      const res = await api.get('/meetings');
+      // Find an active meeting (pending or accepted) with this chat partner
+      const activeMeeting = res.data.find((m: any) => 
+        (m.organizer?.id === userId || m.organizer?._id === userId || m.invitee?.id === userId || m.invitee?._id === userId) && 
+        (m.status === 'pending' || m.status === 'accepted')
+      );
+      setPartnerMeeting(activeMeeting || null);
+    } catch (err) {
+      console.error('Error fetching partner meeting:', err);
+    }
+  };
+
   useEffect(() => {
     if (currentUser) {
       fetchConversations();
@@ -576,26 +597,6 @@ export const ChatPage: React.FC = () => {
 
       newSocket.on('connect', () => {
         newSocket.emit('register-user', currentUser.id);
-      });
-
-      newSocket.on('incoming-call', (data: any) => {
-        setIncomingCall(data);
-      });
-
-      newSocket.on('call-accepted', (data: any) => {
-        // Partner accepted our call
-        setActiveCall(prev => prev ? { ...prev, channelName: data.channelName } : null);
-      });
-
-      newSocket.on('call-rejected', () => {
-        toast.error('Call was declined.');
-        setActiveCall(null);
-      });
-
-      newSocket.on('call-ended', () => {
-        toast('Call ended', { icon: '📞' });
-        setActiveCall(null);
-        setIncomingCall(null);
       });
 
       return () => {
@@ -633,7 +634,11 @@ export const ChatPage: React.FC = () => {
 
     if (currentUser && userId) {
       fetchMessages();
-      const interval = setInterval(fetchMessages, 3000);
+      fetchActiveMeeting();
+      const interval = setInterval(() => {
+        fetchMessages();
+        fetchActiveMeeting();
+      }, 3000);
       return () => clearInterval(interval);
     } else {
       setChatPartner(null);
@@ -712,113 +717,53 @@ export const ChatPage: React.FC = () => {
     }
   };
   
-  // Calling Handlers
-  const handleStartCall = async (callType: 'audio' | 'video') => {
-    if (!chatPartner || !socket || !currentUser) return;
-    // Agora channel names must be ≤64 bytes.
-    // Old format with full MongoDB ObjectIDs was 71 chars — too long.
-    // Use last 8 chars of each ID + base-36 timestamp (~8 chars) = ~27 chars total.
-    const id1 = currentUser.id.slice(-8);
-    const id2 = chatPartner.id.slice(-8);
-    const ts  = Date.now().toString(36);
-    const channelName = `call-${id1}-${id2}-${ts}`;
-    
-    let token: string | null = null;
+  // Meeting Booking Handler
+  const handleBookMeeting = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!chatPartner || !currentUser) return;
+    setIsBooking(true);
+
+    const startDateTime = new Date(`${meetingDate}T${meetingStartTime}`);
+    const endDateTime = new Date(`${meetingDate}T${meetingEndTime}`);
+
+    const isBefore = (date1: Date, date2: Date) => date1.getTime() < date2.getTime();
+    if (isBefore(endDateTime, startDateTime)) {
+      toast.error(t('End time must be after start time.'));
+      setIsBooking(false);
+      return;
+    }
+
     try {
-      const res = await api.get(`/chat/agora-token?channelName=${channelName}`);
-      token = res.data.token;
-    } catch(err) {
-      console.error('Token fetch failed', err);
+      await api.post('/meetings/schedule', {
+        title: meetingTitle,
+        description: meetingDesc,
+        inviteeId: chatPartner.id || chatPartner._id,
+        startTime: startDateTime.toISOString(),
+        endTime: endDateTime.toISOString(),
+      });
+
+      toast.success(t('Meeting scheduled successfully!'));
+      // Reset form
+      setMeetingTitle('');
+      setMeetingDesc('');
+      setMeetingDate('');
+      setMeetingStartTime('');
+      setMeetingEndTime('');
+      setShowBookForm(false);
+    } catch (error: any) {
+      console.error('Failed to schedule meeting:', error);
+      const msg = error.response?.data?.message || t('Failed to schedule meeting.');
+      toast.error(msg);
+    } finally {
+      setIsBooking(false);
     }
-
-    // Set our active call immediately (Ringing state)
-    setActiveCall({
-      channelName,
-      partnerName: chatPartner.name,
-      partnerAvatar: chatPartner.avatarUrl,
-      callType,
-      token,
-      isCaller: true,
-      partnerId: chatPartner.id,
-    });
-
-    socket.emit('call-user', {
-      userToCall: chatPartner.id,
-      from: currentUser.id,
-      callerName: currentUser.name,
-      callerAvatar: currentUser.avatarUrl,
-      callType,
-      channelName
-    });
-  };
-
-  const handleAcceptCall = async () => {
-    if (!incomingCall || !socket) return;
-    
-    let token: string | null = null;
-    try {
-      const res = await api.get(`/chat/agora-token?channelName=${incomingCall.channelName}`);
-      token = res.data.token;
-    } catch(err) {
-      console.error('Token fetch failed', err);
-    }
-
-    setActiveCall({
-      channelName: incomingCall.channelName,
-      partnerName: incomingCall.callerName,
-      partnerAvatar: incomingCall.callerAvatar,
-      callType: incomingCall.callType,
-      token,
-      isCaller: false,
-      partnerId: incomingCall.from,
-    });
-    socket.emit('accept-call', { to: incomingCall.from, channelName: incomingCall.channelName });
-    setIncomingCall(null);
-  };
-
-  const handleRejectCall = () => {
-    if (!incomingCall || !socket) return;
-    socket.emit('reject-call', { to: incomingCall.from });
-    setIncomingCall(null);
-  };
-
-  const handleEndCall = () => {
-    // Use partnerId stored in activeCall so this works regardless of chat window state
-    if (activeCall && socket) {
-      socket.emit('end-call', { to: activeCall.partnerId });
-    }
-    setActiveCall(null);
-    setIncomingCall(null);
   };
 
   if (!currentUser) return null;
   
   return (
     <>
-      {/* ───────────────────────────────────────────────── */}
-      {/* Calling Overlays                                 */}
-      {/* ───────────────────────────────────────────────── */}
-      {incomingCall && !activeCall && (
-        <IncomingCallModal
-          callerName={incomingCall.callerName}
-          callerAvatar={incomingCall.callerAvatar}
-          callType={incomingCall.callType}
-          onAccept={handleAcceptCall}
-          onReject={handleRejectCall}
-        />
-      )}
 
-      {activeCall && (
-        <CallInterface
-          channelName={activeCall.channelName}
-          callType={activeCall.callType}
-          partnerName={activeCall.partnerName}
-          partnerAvatar={activeCall.partnerAvatar}
-          token={activeCall.token || null}
-          isCaller={activeCall.isCaller}
-          onEndCall={handleEndCall}
-        />
-      )}
 
       {/* ───────────────────────────────────────────────── */}
       {/* WhatsApp-like Media Preview Modal                */}
@@ -961,26 +906,6 @@ export const ChatPage: React.FC = () => {
                 </div>
                 
                 <div className="flex space-x-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="rounded-full p-2"
-                    aria-label="Voice call"
-                    onClick={() => handleStartCall('audio')}
-                  >
-                    <Phone size={18} />
-                  </Button>
-                  
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="rounded-full p-2"
-                    aria-label="Video call"
-                    onClick={() => handleStartCall('video')}
-                  >
-                    <Video size={18} />
-                  </Button>
-                  
                   <Button
                     variant="ghost"
                     size="sm"
@@ -1359,6 +1284,144 @@ export const ChatPage: React.FC = () => {
                   )}
                 </div>
               )}
+
+              {/* Book a Meeting Section */}
+              <div className="space-y-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+                <h5 className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <Calendar size={13} className="text-indigo-500" />
+                  {t('Book a Meeting')}
+                </h5>
+                
+                {partnerMeeting ? (
+                  partnerMeeting.status === 'accepted' ? (
+                    <div className="bg-emerald-50/40 dark:bg-emerald-950/15 p-3 rounded-xl border border-emerald-100/80 dark:border-emerald-900/30 space-y-3 shadow-sm">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] font-extrabold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded">{t('Confirmed')}</span>
+                        <span className="text-[10px] text-gray-550 dark:text-gray-450 font-sans font-semibold">
+                          {format(new Date(partnerMeeting.startTime), 'p')}
+                        </span>
+                      </div>
+                      <div>
+                        <h6 className="text-xs font-bold text-gray-800 dark:text-gray-200 truncate">{partnerMeeting.title}</h6>
+                        <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate mt-0.5">
+                          {partnerMeeting.description || t('No description.')}
+                        </p>
+                      </div>
+                      <Button
+                        fullWidth
+                        onClick={() => navigate(partnerMeeting.roomUrl)}
+                        className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs py-2 shadow-md rounded-lg font-medium transition-all"
+                      >
+                        <Video size={14} />
+                        {t('Join Meeting')}
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="bg-gray-50 dark:bg-gray-950/30 p-3 rounded-xl border border-gray-150 dark:border-gray-800 space-y-3 shadow-sm">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] font-extrabold text-amber-600 dark:text-amber-400 uppercase tracking-wider bg-amber-50/55 dark:bg-amber-950/30 px-2 py-0.5 rounded">{t('Pending')}</span>
+                        <span className="text-[10px] text-gray-550 dark:text-gray-450 font-sans font-semibold">
+                          {format(new Date(partnerMeeting.startTime), 'p')}
+                        </span>
+                      </div>
+                      <div>
+                        <h6 className="text-xs font-bold text-gray-800 dark:text-gray-200 truncate">{partnerMeeting.title}</h6>
+                        <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate mt-0.5">
+                          {partnerMeeting.description || t('No description.')}
+                        </p>
+                      </div>
+                      <Button
+                        fullWidth
+                        disabled
+                        className="flex items-center justify-center gap-2 bg-gray-250 dark:bg-gray-800 text-gray-400 dark:text-gray-500 text-xs py-2 rounded-lg font-medium cursor-not-allowed border border-gray-200/50 dark:border-gray-800"
+                      >
+                        <Calendar size={14} />
+                        {t('Awaiting Acceptance')}
+                      </Button>
+                    </div>
+                  )
+                ) : !showBookForm ? (
+                  <Button
+                    variant="outline"
+                    fullWidth
+                    onClick={() => setShowBookForm(true)}
+                    className="flex items-center justify-center gap-2 border-indigo-100 dark:border-indigo-900/60 text-indigo-650 dark:text-indigo-400 hover:bg-indigo-50/50 dark:hover:bg-indigo-950/20 text-xs py-2 shadow-sm rounded-lg"
+                  >
+                    <Video size={14} />
+                    {t('Schedule Meeting')}
+                  </Button>
+                ) : (
+                  <form onSubmit={handleBookMeeting} className="space-y-3 bg-gray-50/50 dark:bg-gray-950/30 p-3.5 rounded-xl border border-gray-100 dark:border-gray-800">
+                    <Input
+                      label={t('Meeting Title')}
+                      placeholder={t('e.g. Project Alignment')}
+                      value={meetingTitle}
+                      onChange={(e) => setMeetingTitle(e.target.value)}
+                      required
+                      fullWidth
+                      className="text-xs text-gray-900 dark:text-white"
+                    />
+                    <Input
+                      label={t('Description')}
+                      placeholder={t('Optional')}
+                      value={meetingDesc}
+                      onChange={(e) => setMeetingDesc(e.target.value)}
+                      fullWidth
+                      className="text-xs text-gray-900 dark:text-white"
+                    />
+                    <div className="space-y-2">
+                      <Input
+                        label={t('Date')}
+                        type="date"
+                        value={meetingDate}
+                        onChange={(e) => setMeetingDate(e.target.value)}
+                        required
+                        fullWidth
+                        className="text-xs text-gray-900 dark:text-white font-sans"
+                      />
+                      <div className="grid grid-cols-2 gap-2">
+                        <Input
+                          label={t('Start Time')}
+                          type="time"
+                          value={meetingStartTime}
+                          onChange={(e) => setMeetingStartTime(e.target.value)}
+                          required
+                          fullWidth
+                          className="text-xs text-gray-900 dark:text-white font-sans"
+                        />
+                        <Input
+                          label={t('End Time')}
+                          type="time"
+                          value={meetingEndTime}
+                          onChange={(e) => setMeetingEndTime(e.target.value)}
+                          required
+                          fullWidth
+                          className="text-xs text-gray-900 dark:text-white font-sans"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex gap-2 pt-2">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowBookForm(false)}
+                        className="flex-1 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 text-xs py-1.5"
+                      >
+                        {t('Cancel')}
+                      </Button>
+                      <Button
+                        type="submit"
+                        size="sm"
+                        disabled={isBooking}
+                        className="flex-1 bg-indigo-600 hover:bg-indigo-750 text-white text-xs py-1.5 shadow-sm"
+                      >
+                        {isBooking ? <Loader2 className="animate-spin" size={14} /> : t('Confirm')}
+                      </Button>
+                    </div>
+                  </form>
+                )}
+              </div>
             </div>
           </div>
         )}

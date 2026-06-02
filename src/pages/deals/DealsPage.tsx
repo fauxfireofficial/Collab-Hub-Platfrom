@@ -102,7 +102,7 @@ export const DealsPage: React.FC = () => {
               </div>
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">{t('Total Investment')}</p>
-                <p className="text-lg font-semibold text-gray-900">$4.3M</p>
+                <p className="text-lg font-semibold text-gray-900 dark:text-white">$4.3M</p>
               </div>
             </div>
           </CardBody>
@@ -116,7 +116,7 @@ export const DealsPage: React.FC = () => {
               </div>
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">{t('Active Deals')}</p>
-                <p className="text-lg font-semibold text-gray-900">8</p>
+                <p className="text-lg font-semibold text-gray-900 dark:text-white">8</p>
               </div>
             </div>
           </CardBody>
@@ -130,7 +130,7 @@ export const DealsPage: React.FC = () => {
               </div>
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">{t('Portfolio Companies')}</p>
-                <p className="text-lg font-semibold text-gray-900">12</p>
+                <p className="text-lg font-semibold text-gray-900 dark:text-white">12</p>
               </div>
             </div>
           </CardBody>
@@ -144,7 +144,7 @@ export const DealsPage: React.FC = () => {
               </div>
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">{t('Closed This Month')}</p>
-                <p className="text-lg font-semibold text-gray-900">2</p>
+                <p className="text-lg font-semibold text-gray-900 dark:text-white">2</p>
               </div>
             </div>
           </CardBody>
@@ -191,33 +191,33 @@ export const DealsPage: React.FC = () => {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <tr className="border-b border-gray-200 dark:border-gray-700">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     {t('Startup')}
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     {t('Amount')}
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     {t('Equity')}
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     {t('Status')}
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     {t('Stage')}
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     {t('Last Activity')}
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     {t('Actions')}
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                 {deals.map(deal => (
-                  <tr key={deal.id} className="hover:bg-gray-50">
+                  <tr key={deal.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <Avatar
@@ -227,20 +227,20 @@ export const DealsPage: React.FC = () => {
                           className="flex-shrink-0"
                         />
                         <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">
+                          <div className="text-sm font-medium text-gray-900 dark:text-white">
                             {deal.startup.name}
                           </div>
-                          <div className="text-sm text-gray-500">
+                          <div className="text-sm text-gray-500 dark:text-gray-400">
                             {deal.startup.industry}
                           </div>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{deal.amount}</div>
+                      <div className="text-sm text-gray-900 dark:text-white">{deal.amount}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{deal.equity}</div>
+                      <div className="text-sm text-gray-900 dark:text-white">{deal.equity}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <Badge variant={getStatusColor(deal.status)}>
@@ -248,10 +248,10 @@ export const DealsPage: React.FC = () => {
                       </Badge>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{deal.stage}</div>
+                      <div className="text-sm text-gray-900 dark:text-white">{deal.stage}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-500">
+                      <div className="text-sm text-gray-500 dark:text-gray-400">
                         {new Date(deal.lastActivity).toLocaleDateString()}
                       </div>
                     </td>

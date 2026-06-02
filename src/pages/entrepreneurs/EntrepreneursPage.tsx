@@ -83,8 +83,8 @@ export const EntrepreneursPage: React.FC = () => {
                       onClick={() => toggleIndustry(industry)}
                       className={`block w-full text-left px-3 py-2 rounded-md text-sm ${
                         selectedIndustries.includes(industry)
-                          ? 'bg-primary-50 text-primary-700'
-                          : 'text-gray-700 hover:bg-gray-50'
+                          ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400'
+                          : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
                       }`}
                     >
                       {industry}
@@ -102,8 +102,8 @@ export const EntrepreneursPage: React.FC = () => {
                       onClick={() => toggleFundingRange(range)}
                       className={`block w-full text-left px-3 py-2 rounded-md text-sm ${
                         selectedFundingRange.includes(range)
-                          ? 'bg-primary-50 text-primary-700'
-                          : 'text-gray-700 hover:bg-gray-50'
+                          ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400'
+                          : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
                       }`}
                     >
                       {range}
@@ -115,15 +115,15 @@ export const EntrepreneursPage: React.FC = () => {
               <div>
                 <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">{t('Location')}</h3>
                 <div className="space-y-2">
-                  <button className="flex items-center w-full text-left px-3 py-2 rounded-md text-sm text-gray-700 hover:bg-gray-50">
+                  <button className="flex items-center w-full text-left px-3 py-2 rounded-md text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
                     <MapPin size={16} className="mr-2" />
                     San Francisco, CA
                   </button>
-                  <button className="flex items-center w-full text-left px-3 py-2 rounded-md text-sm text-gray-700 hover:bg-gray-50">
+                  <button className="flex items-center w-full text-left px-3 py-2 rounded-md text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
                     <MapPin size={16} className="mr-2" />
                     New York, NY
                   </button>
-                  <button className="flex items-center w-full text-left px-3 py-2 rounded-md text-sm text-gray-700 hover:bg-gray-50">
+                  <button className="flex items-center w-full text-left px-3 py-2 rounded-md text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
                     <MapPin size={16} className="mr-2" />
                     Boston, MA
                   </button>
