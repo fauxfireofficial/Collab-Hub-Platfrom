@@ -17,7 +17,10 @@ const transactionSchema = new mongoose.Schema({
   },
   milestoneId: { type: mongoose.Schema.Types.ObjectId, ref: 'Milestone' },
   idempotencyKey: { type: String, unique: true, sparse: true },
-  agreementAccepted: { type: Boolean, default: false }
+  agreementAccepted: { type: Boolean, default: false },
+  fee: { type: Number, default: 0 },
+  iban: { type: String },
+  stripePayoutId: { type: String }
 }, { timestamps: true });
 
 transactionSchema.set('toJSON', {

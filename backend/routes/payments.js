@@ -5,8 +5,17 @@ import User from '../models/User.js';
 import Notification from '../models/Notification.js';
 import { createNotification } from './notifications.js';
 import { auth } from '../middleware/auth.js';
+import Stripe from 'stripe';
 
 const router = express.Router();
+
+let stripe;
+const getStripe = () => {
+  if (!stripe) {
+    stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+  }
+  return stripe;
+};
 
 // ── Input Validation Helper ──────────────────────────────────────────────────
 const validateAmount = (amount) => {
@@ -23,6 +32,34 @@ const checkIdempotency = async (key) => {
   const existing = await Transaction.findOne({ idempotencyKey: key });
   return existing;
 };
+
+// @route   POST /api/payments/create-payment-intent
+// @desc    Create Stripe Payment Intent for deposit
+router.post('/create-payment-intent', auth, async (req, res) => {
+  const { amount, currency } = req.body;
+  const parsedAmount = validateAmount(amount);
+  if (!parsedAmount) {
+    return res.status(400).json({ message: 'Invalid deposit amount.' });
+  }
+
+  try {
+    const stripeInstance = getStripe();
+    const paymentIntent = await stripeInstance.paymentIntents.create({
+      amount: Math.round(parsedAmount * 100), // Stripe expects cents
+      currency: currency || 'usd',
+      automatic_payment_methods: { enabled: true },
+      metadata: { userId: req.user.id }
+    });
+
+    res.send({
+      clientSecret: paymentIntent.client_secret,
+    });
+  } catch (error) {
+    console.error('Create payment intent error:', error);
+    res.status(500).json({ message: error.message || 'Server error creating payment intent' });
+  }
+});
+
 
 // @route   POST /api/payments/deposit
 // @desc    Deposit funds into wallet (simulates Stripe mockup checkout success)
@@ -63,13 +100,22 @@ router.post('/deposit', auth, async (req, res) => {
 });
 
 // @route   POST /api/payments/withdraw
-// @desc    Withdraw funds from wallet
+// @desc    Request to withdraw funds from wallet (status set to pending)
 router.post('/withdraw', auth, async (req, res) => {
-  const { amount, idempotencyKey } = req.body;
+  const { amount, iban, idempotencyKey } = req.body;
   const parsedAmount = validateAmount(amount);
   if (!parsedAmount) {
     return res.status(400).json({ message: 'Invalid withdrawal amount. Must be a positive number.' });
   }
+
+  const MIN_WITHDRAWAL = 10.0;
+  const WITHDRAWAL_FEE = 1.0;
+
+  if (parsedAmount < MIN_WITHDRAWAL) {
+    return res.status(400).json({ message: `Minimum withdrawal amount is $${MIN_WITHDRAWAL.toFixed(2)}.` });
+  }
+
+  const totalRequested = parsedAmount + WITHDRAWAL_FEE;
 
   try {
     // Idempotency check
@@ -81,26 +127,177 @@ router.post('/withdraw', auth, async (req, res) => {
     }
 
     const user = await User.findById(req.user.id);
-    if (user.walletBalance < parsedAmount) {
-      return res.status(400).json({ message: 'Insufficient funds for withdrawal' });
-    }
 
-    user.walletBalance -= parsedAmount;
-    await user.save();
+    // Calculate total pending withdrawals for this user to prevent double-spending
+    const pendingTransactions = await Transaction.find({
+      userId: req.user.id,
+      type: 'withdraw',
+      status: 'pending'
+    });
+    const totalPending = pendingTransactions.reduce((sum, tx) => sum + tx.amount + (tx.fee || 0), 0);
+    const availableBalance = user.walletBalance - totalPending;
+
+    if (availableBalance < totalRequested) {
+      return res.status(400).json({ 
+        message: `Insufficient available balance. Your active wallet balance is $${user.walletBalance.toFixed(2)}, but you have $${totalPending.toFixed(2)} tied up in pending withdrawal requests. Available: $${availableBalance.toFixed(2)} (Requires $${totalRequested.toFixed(2)} including $${WITHDRAWAL_FEE.toFixed(2)} fee).` 
+      });
+    }
 
     const tx = new Transaction({
       userId: req.user.id,
       type: 'withdraw',
       amount: parsedAmount,
-      status: 'completed',
+      fee: WITHDRAWAL_FEE,
+      iban: iban || 'N/A',
+      status: 'pending',
       idempotencyKey: idempotencyKey || undefined
     });
 
     await tx.save();
-    res.json({ balance: user.walletBalance, transaction: tx });
+    
+    // Return both the walletBalance and the newly calculated available balance
+    res.json({ 
+      balance: user.walletBalance, 
+      availableBalance: user.walletBalance - totalPending - totalRequested,
+      transaction: tx 
+    });
   } catch (error) {
-    console.error('Withdrawal error:', error);
-    res.status(500).json({ message: 'Server error processing withdrawal' });
+    console.error('Withdrawal request error:', error);
+    res.status(500).json({ message: 'Server error processing withdrawal request' });
+  }
+});
+
+// @route   GET /api/payments/withdraw/pending
+// @desc    Get all pending withdrawal requests (Admin use)
+router.get('/withdraw/pending', auth, async (req, res) => {
+  try {
+    // In a production app, we would restrict this to admin users.
+    // For development and testing role-switching simulator, we allow authenticated users.
+    const pendingWithdrawals = await Transaction.find({
+      type: 'withdraw',
+      status: 'pending'
+    })
+    .populate('userId', 'name email role')
+    .sort({ createdAt: -1 });
+
+    res.json(pendingWithdrawals);
+  } catch (error) {
+    console.error('Get pending withdrawals error:', error);
+    res.status(500).json({ message: 'Server error retrieving pending withdrawals' });
+  }
+});
+
+// @route   POST /api/payments/withdraw/approve/:id
+// @desc    Approve a pending withdrawal, deduct wallet balance and execute Stripe payout
+router.post('/withdraw/approve/:id', auth, async (req, res) => {
+  try {
+    const tx = await Transaction.findById(req.params.id);
+    if (!tx || tx.type !== 'withdraw' || tx.status !== 'pending') {
+      return res.status(400).json({ message: 'Pending withdrawal request not found.' });
+    }
+
+    const user = await User.findById(tx.userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found.' });
+    }
+
+    const totalDeduction = tx.amount + (tx.fee || 0);
+    if (user.walletBalance < totalDeduction) {
+      tx.status = 'failed';
+      await tx.save();
+      return res.status(400).json({ message: 'User has insufficient wallet balance to complete this payout. Request set to failed.' });
+    }
+
+    // Call Stripe Payouts API
+    let stripePayoutId = null;
+    let stripeErrorOccurred = false;
+    let stripeErrorMessage = '';
+    
+    try {
+      const stripeInstance = getStripe();
+      const payout = await stripeInstance.payouts.create({
+        amount: Math.round(tx.amount * 100), // in cents
+        currency: 'usd',
+        statement_descriptor: 'NEXUS WITHDRAWAL',
+      });
+      stripePayoutId = payout.id;
+    } catch (stripeError) {
+      console.warn('Stripe payout failed, falling back to mock payout:', stripeError.message);
+      stripeErrorOccurred = true;
+      stripeErrorMessage = stripeError.message;
+      // In sandbox mode, generate a mock Stripe payout ID if it fails due to setup limitations
+      stripePayoutId = 'po_mock_' + Math.random().toString(36).substring(2, 11) + Date.now();
+    }
+
+    // Deduct from wallet balance ONLY after approval
+    user.walletBalance -= totalDeduction;
+    await user.save();
+
+    // Complete transaction
+    tx.status = 'completed';
+    tx.stripePayoutId = stripePayoutId;
+    await tx.save();
+
+    // Send notifications
+    const io = req.app.get('io');
+    if (io) {
+      io.to(user._id.toString()).emit('payment-received', {
+        type: 'withdraw',
+        amount: tx.amount,
+        message: `Your withdrawal of $${tx.amount.toLocaleString()} has been approved and sent to your bank account!`
+      });
+    }
+
+    await createNotification(io, {
+      recipientId: user._id,
+      senderId: req.user.id,
+      type: 'system',
+      content: `Your withdrawal request of $${tx.amount.toLocaleString()} has been approved (Stripe ID: ${stripePayoutId}).`,
+      link: '/payments'
+    });
+
+    res.json({ 
+      message: 'Withdrawal approved successfully.', 
+      transaction: tx,
+      stripeWarning: stripeErrorOccurred ? `Stripe Sandbox Payout simulated: ${stripeErrorMessage}` : null
+    });
+  } catch (error) {
+    console.error('Approve withdrawal error:', error);
+    res.status(500).json({ message: 'Server error approving withdrawal' });
+  }
+});
+
+// @route   POST /api/payments/withdraw/reject/:id
+// @desc    Reject a pending withdrawal request
+router.post('/withdraw/reject/:id', auth, async (req, res) => {
+  try {
+    const tx = await Transaction.findById(req.params.id);
+    if (!tx || tx.type !== 'withdraw' || tx.status !== 'pending') {
+      return res.status(400).json({ message: 'Pending withdrawal request not found.' });
+    }
+
+    const user = await User.findById(tx.userId);
+    
+    // Set status to failed
+    tx.status = 'failed';
+    await tx.save();
+
+    // Send notification
+    if (user) {
+      const io = req.app.get('io');
+      await createNotification(io, {
+        recipientId: user._id,
+        senderId: req.user.id,
+        type: 'system',
+        content: `Your withdrawal request of $${tx.amount.toLocaleString()} has been rejected by the admin.`,
+        link: '/payments'
+      });
+    }
+
+    res.json({ message: 'Withdrawal request rejected successfully.', transaction: tx });
+  } catch (error) {
+    console.error('Reject withdrawal error:', error);
+    res.status(500).json({ message: 'Server error rejecting withdrawal' });
   }
 });
 

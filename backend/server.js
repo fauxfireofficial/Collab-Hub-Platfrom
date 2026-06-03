@@ -1,9 +1,9 @@
+import 'dotenv/config';
 import express from 'express';
 import http from 'http';
 import { Server } from 'socket.io';
 import mongoose from 'mongoose';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import path from 'path';
 
 // Import Routes
@@ -16,7 +16,6 @@ import chatRoutes from './routes/chat.js';
 import notificationRoutes from './routes/notifications.js';
 import milestoneRoutes from './routes/milestones.js';
 
-dotenv.config();
 
 const app = express();
 const server = http.createServer(app);

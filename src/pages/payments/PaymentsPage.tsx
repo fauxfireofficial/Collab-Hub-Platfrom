@@ -28,8 +28,180 @@ import { format } from 'date-fns';
 import { useLocale } from '../../context/LocaleContext';
 import { useTranslation } from 'react-i18next';
 import { io } from 'socket.io-client';
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
+
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY || '');
+
+interface StripeDepositFormProps {
+  exchangeRate: number;
+  currency: string;
+  formatLocalCurrency: (amount: number) => string;
+  onClose: () => void;
+  onSuccess: (newBalance: number, tx: any) => void;
+}
+
+const StripeDepositForm: React.FC<StripeDepositFormProps> = ({
+  exchangeRate,
+  currency,
+  formatLocalCurrency,
+  onClose,
+  onSuccess,
+}) => {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [amount, setAmount] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Stripe fee calculation (2.9% + $0.30) — deducted from entered amount
+  const parsedAmount = parseFloat(amount) || 0;
+  const amountInUSD = parsedAmount / exchangeRate;
+  const stripeFeeUSD = amountInUSD > 0 ? (amountInUSD * 0.029) + 0.30 : 0;
+  const netAmountUSD = amountInUSD - stripeFeeUSD;
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!stripe || !elements) {
+      return;
+    }
+
+    setIsProcessing(true);
+    setErrorMessage(null);
+
+    try {
+      // 1. Create Payment Intent on the backend
+      const response = await api.post('/payments/create-payment-intent', {
+        amount: amountInUSD,
+        currency: 'usd',
+      });
+
+      const { clientSecret } = response.data;
+
+      // 2. Confirm the payment with Stripe
+      const cardElement = elements.getElement(CardElement);
+      if (!cardElement) {
+        throw new Error('Card input element not found.');
+      }
+
+      const result = await stripe.confirmCardPayment(clientSecret, {
+        payment_method: {
+          card: cardElement,
+        },
+      });
+
+      if (result.error) {
+        throw new Error(result.error.message || 'Payment confirmation failed.');
+      }
+
+      if (result.paymentIntent && result.paymentIntent.status === 'succeeded') {
+        // 3. Record net amount (after Stripe fees) in wallet
+        const idempotencyKey = 'dep_' + Math.random().toString(36).substring(2, 11) + Date.now();
+        const depositResponse = await api.post('/payments/deposit', {
+          amount: netAmountUSD,
+          idempotencyKey,
+        });
+
+        onSuccess(depositResponse.data.balance, depositResponse.data.transaction);
+      } else {
+        throw new Error('Payment status did not succeed.');
+      }
+    } catch (err: any) {
+      console.error('Stripe deposit error:', err);
+      setErrorMessage(err.message || 'An error occurred during payment.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const isDark = document.documentElement.classList.contains('dark') || document.body.classList.contains('dark');
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-800/50 p-3 rounded-lg flex items-center gap-2 text-xs text-indigo-800 dark:text-indigo-300">
+        <ShieldCheck size={16} className="text-indigo-600 flex-shrink-0" />
+        <span>You are operating in Stripe Sandbox mode. Use `4242 4242...` dummy cards.</span>
+      </div>
+
+      <Input
+        label={`Amount to Deposit (${currency})`}
+        type="number"
+        placeholder={`e.g. ${Math.ceil(100 * exchangeRate)}`}
+        min={Math.ceil(5 * exchangeRate)}
+        value={amount}
+        onChange={(e) => setAmount(e.target.value)}
+        required
+        fullWidth
+        disabled={isProcessing}
+      />
+
+      {/* Stripe Fee Breakdown */}
+      {parsedAmount > 0 && (
+        <div className="bg-gray-50 dark:bg-gray-900/60 border border-gray-200 dark:border-gray-800 rounded-lg p-3 space-y-2 text-xs">
+          <div className="flex justify-between text-gray-600 dark:text-gray-400">
+            <span>You Pay</span>
+            <span className="font-medium text-gray-900 dark:text-white">{formatLocalCurrency(amountInUSD)}</span>
+          </div>
+          <div className="flex justify-between text-gray-600 dark:text-gray-400">
+            <span>Stripe Processing Fee <span className="text-gray-400 dark:text-gray-500">(2.9% + $0.30)</span></span>
+            <span className="font-medium text-red-500 dark:text-red-400">−{formatLocalCurrency(stripeFeeUSD)}</span>
+          </div>
+          <div className="flex justify-between pt-2 border-t border-gray-200 dark:border-gray-700 font-semibold text-sm">
+            <span className="text-gray-900 dark:text-white">Wallet Credit</span>
+            <span className="text-emerald-600 dark:text-emerald-400">{formatLocalCurrency(netAmountUSD > 0 ? netAmountUSD : 0)}</span>
+          </div>
+          <p className="text-[10px] text-gray-400 dark:text-gray-500 pt-1">
+            Stripe service charges are deducted. Your wallet will receive the net amount shown above.
+          </p>
+        </div>
+      )}
+
+      <div className="space-y-2 border-t border-gray-150 dark:border-gray-800 pt-4">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          Card Details
+        </label>
+        <div className="p-3 border border-gray-300 dark:border-gray-750 bg-white dark:bg-gray-950 rounded-md focus-within:ring-2 focus-within:ring-primary-500 focus-within:border-primary-500 transition-all">
+          <CardElement
+            options={{
+              style: {
+                base: {
+                  fontSize: '16px',
+                  color: isDark ? '#f3f4f6' : '#1f2937',
+                  fontFamily: 'Inter, sans-serif',
+                  '::placeholder': {
+                    color: '#9ca3af',
+                  },
+                },
+                invalid: {
+                  color: '#ef4444',
+                },
+              },
+            }}
+          />
+        </div>
+      </div>
+
+      {errorMessage && (
+        <div className="text-sm text-red-600 dark:text-red-400 mt-2 font-medium">
+          {errorMessage}
+        </div>
+      )}
+
+      <div className="flex gap-3 border-t border-gray-150 dark:border-gray-800 pt-4">
+        <Button variant="outline" type="button" fullWidth onClick={onClose} disabled={isProcessing}>
+          Cancel
+        </Button>
+        <Button type="submit" fullWidth isLoading={isProcessing} disabled={!stripe || isProcessing}>
+          Deposit Funds
+        </Button>
+      </div>
+    </form>
+  );
+};
+
 
 interface Transaction {
   id: string;
@@ -98,16 +270,60 @@ export const PaymentsPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'history' | 'milestones'>('history');
 
+  // Admin & Payout Simulation states
+  const [iban, setIban] = useState('');
+  const [isAdminView, setIsAdminView] = useState(false);
+  const [pendingWithdrawals, setPendingWithdrawals] = useState<any[]>([]);
+  const [isAdminLoading, setIsAdminLoading] = useState(false);
+
+  const fetchPendingWithdrawals = async () => {
+    setIsAdminLoading(true);
+    try {
+      const response = await api.get('/payments/withdraw/pending');
+      setPendingWithdrawals(response.data);
+    } catch (error) {
+      console.error('Failed to fetch pending withdrawals:', error);
+    } finally {
+      setIsAdminLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isAdminView) {
+      fetchPendingWithdrawals();
+    }
+  }, [isAdminView]);
+
+  const handleApproveWithdrawal = async (txId: string) => {
+    try {
+      const response = await api.post(`/payments/withdraw/approve/${txId}`);
+      toast.success(response.data.message || 'Withdrawal approved successfully!');
+      if (response.data.stripeWarning) {
+        toast(response.data.stripeWarning, { icon: '⚠️', duration: 5000 });
+      }
+      fetchPendingWithdrawals();
+      fetchHistory(); // refresh history and balance
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to approve withdrawal.');
+    }
+  };
+
+  const handleRejectWithdrawal = async (txId: string) => {
+    try {
+      const response = await api.post(`/payments/withdraw/reject/${txId}`);
+      toast.success(response.data.message || 'Withdrawal request rejected.');
+      fetchPendingWithdrawals();
+      fetchHistory();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to reject withdrawal.');
+    }
+  };
+
   // Modals state
   const [activeModal, setActiveModal] = useState<'none' | 'deposit' | 'withdraw' | 'transfer' | 'propose' | 'fund'>('none');
   const [amount, setAmount] = useState('');
   const [recipientId, setRecipientId] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Stripe mockup states
-  const [cardNumber, setCardNumber] = useState('4242 •••• •••• 4242');
-  const [cardExpiry, setCardExpiry] = useState('12/28');
-  const [cardCvc, setCardCvc] = useState('•••');
 
   // Escrow & Terms States
   const [isEscrow, setIsEscrow] = useState(false);
@@ -135,6 +351,19 @@ export const PaymentsPage: React.FC = () => {
 
   // Fund Milestone State
   const [selectedMilestone, setSelectedMilestone] = useState<Milestone | null>(null);
+
+  // Custom Confirmation Modal State
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    type: 'complete' | 'release' | 'none';
+    milestoneId: string;
+    title?: string;
+    amount?: number;
+  }>({
+    isOpen: false,
+    type: 'none',
+    milestoneId: '',
+  });
 
   // Selected Startup for Investors to explore
   const [exploreStartupId, setExploreStartupId] = useState<string>('');
@@ -377,41 +606,6 @@ export const PaymentsPage: React.FC = () => {
     link.click();
   };
 
-  const handleDeposit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    try {
-      const amountInUSD = parseFloat(amount) / exchangeRate;
-      const idempotencyKey = 'dep_' + Math.random().toString(36).substring(2, 11) + Date.now();
-      const response = await api.post('/payments/deposit', { 
-        amount: amountInUSD,
-        idempotencyKey 
-      });
-      setBalance(response.data.balance);
-      toast.success(`Successfully deposited ${formatLocalCurrency(parseFloat(amount))} via Stripe Sandbox!`);
-      
-      const tx = response.data.transaction;
-      setReceiptData({
-        id: tx?.id || tx?._id || 'dep_' + Math.random().toString(36).substring(2, 6),
-        type: 'deposit',
-        amount: parseFloat(amount),
-        recipientName: 'Your Nexus Wallet',
-        senderName: 'Stripe Sandbox',
-        date: format(new Date(tx?.createdAt || Date.now()), 'dd MMM yyyy, hh:mm a'),
-        status: tx?.status || 'completed'
-      });
-
-      setActiveModal('none');
-      setAmount('');
-      fetchHistory();
-      setShowReceipt(true);
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Deposit failed.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   const handleWithdraw = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -420,24 +614,26 @@ export const PaymentsPage: React.FC = () => {
       const idempotencyKey = 'wth_' + Math.random().toString(36).substring(2, 11) + Date.now();
       const response = await api.post('/payments/withdraw', { 
         amount: amountInUSD,
+        iban,
         idempotencyKey 
       });
       setBalance(response.data.balance);
-      toast.success(`Withdrawal of ${formatLocalCurrency(parseFloat(amount))} requested. Funds are being sent to your bank.`);
+      toast.success(`Withdrawal request for ${formatLocalCurrency(parseFloat(amount))} submitted successfully! Status: Pending Admin Approval.`);
       
       const tx = response.data.transaction;
       setReceiptData({
         id: tx?.id || tx?._id || 'wth_' + Math.random().toString(36).substring(2, 6),
         type: 'withdraw',
         amount: parseFloat(amount),
-        recipientName: 'Your Bank Account',
+        recipientName: `Bank IBAN: ${iban}`,
         senderName: 'Your Nexus Wallet',
         date: format(new Date(tx?.createdAt || Date.now()), 'dd MMM yyyy, hh:mm a'),
-        status: tx?.status || 'completed'
+        status: tx?.status || 'pending'
       });
 
       setActiveModal('none');
       setAmount('');
+      setIban('');
       fetchHistory();
       setShowReceipt(true);
     } catch (error: any) {
@@ -533,17 +729,12 @@ export const PaymentsPage: React.FC = () => {
     }
   };
 
-  const handleMarkComplete = async (milestoneId: string) => {
-    const confirm = window.confirm('Are you sure you want to mark this milestone as completed? This will request the investor to release funds.');
-    if (!confirm) return;
-
-    try {
-      await api.put(`/milestones/${milestoneId}/complete`);
-      toast.success('Milestone marked completed. Investor has been notified.');
-      fetchMilestones();
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to update milestone.');
-    }
+  const triggerMarkComplete = (milestoneId: string) => {
+    setConfirmModal({
+      isOpen: true,
+      type: 'complete',
+      milestoneId
+    });
   };
 
   const handleFundMilestone = async (e: React.FormEvent) => {
@@ -578,31 +769,113 @@ export const PaymentsPage: React.FC = () => {
     }
   };
 
-  const handleReleaseEscrow = async (milestoneId: string, title: string, amount: number) => {
-    const confirm = window.confirm(`Are you sure you want to approve and release $${amount.toLocaleString()} for the milestone "${title}"? This cannot be undone.`);
-    if (!confirm) return;
-
-    try {
-      const response = await api.post(`/milestones/${milestoneId}/release`);
-      setBalance(response.data.balance);
-      toast.success('Escrow funds successfully released to startup wallet!');
-      fetchHistory();
-      fetchMilestones();
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to release escrow funds.');
-    }
+  const triggerReleaseEscrow = (milestoneId: string, title: string, amount: number) => {
+    setConfirmModal({
+      isOpen: true,
+      type: 'release',
+      milestoneId,
+      title,
+      amount
+    });
   };
+
 
   if (!user) return null;
 
   return (
     <div className="space-y-6 animate-fade-in text-gray-900 dark:text-gray-150">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Wallet & Payments</h1>
-        <p className="text-gray-600 dark:text-gray-400">Simulate investments, make deposits via Stripe sandbox, and manage escrow milestones</p>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Wallet & Payments</h1>
+          <p className="text-gray-600 dark:text-gray-400">Simulate investments, make deposits via Stripe sandbox, and manage escrow milestones</p>
+        </div>
+        <button
+          onClick={() => setIsAdminView(!isAdminView)}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-semibold transition-all shadow-sm ${
+            isAdminView 
+              ? 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100 dark:bg-red-950/30 dark:text-red-400 dark:border-red-900/50'
+              : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50 dark:bg-gray-905 dark:text-gray-350 dark:border-gray-800 dark:hover:bg-gray-800'
+          }`}
+        >
+          <span>🔧</span>
+          {isAdminView ? 'Switch to User View' : 'Developer Admin Portal'}
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {isAdminView ? (
+        <Card className="shadow-xl border border-red-100 dark:border-red-900/30 overflow-hidden">
+          <CardHeader className="bg-gradient-to-r from-red-600 to-indigo-650 text-white p-5">
+            <h3 className="font-bold text-lg">🔧 Developer Admin Review Panel</h3>
+            <p className="text-xs opacity-90 mt-1">Review pending wallet withdrawals, simulate bank verification, and trigger Stripe sandbox payouts.</p>
+          </CardHeader>
+          <CardBody className="p-0">
+            {isAdminLoading ? (
+              <p className="text-center py-12 text-gray-500">Loading pending requests...</p>
+            ) : pendingWithdrawals.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-gray-50 dark:bg-gray-800/60 text-gray-700 dark:text-gray-300 uppercase text-xs tracking-wider border-b border-gray-200 dark:border-gray-700">
+                    <tr>
+                      <th className="px-6 py-3">Requested By</th>
+                      <th className="px-6 py-3">IBAN / Routing</th>
+                      <th className="px-6 py-3">Payout Amount</th>
+                      <th className="px-6 py-3">Fee</th>
+                      <th className="px-6 py-3">Date</th>
+                      <th className="px-6 py-3 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                    {pendingWithdrawals.map((tx: any) => (
+                      <tr key={tx.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
+                        <td className="px-6 py-4">
+                          <div className="font-semibold text-gray-900 dark:text-white text-sm">{tx.userId?.name}</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400 capitalize">{tx.userId?.role} • {tx.userId?.email}</div>
+                        </td>
+                        <td className="px-6 py-4 font-mono text-xs select-all text-gray-700 dark:text-gray-300">
+                          {tx.iban || 'N/A'}
+                        </td>
+                        <td className="px-6 py-4 font-bold text-gray-900 dark:text-white">
+                          {formatLocalCurrency(tx.amount)}
+                        </td>
+                        <td className="px-6 py-4 text-error-600 dark:text-error-400 font-medium">
+                          {formatLocalCurrency(tx.fee || 0)}
+                        </td>
+                        <td className="px-6 py-4 text-xs text-gray-500 dark:text-gray-400">
+                          {formatLocalDate(new Date(tx.createdAt))}
+                        </td>
+                        <td className="px-6 py-4 text-right space-x-2 whitespace-nowrap">
+                          <Button
+                            size="sm"
+                            className="bg-green-600 hover:bg-green-700 text-white border-none shadow-sm"
+                            onClick={() => handleApproveWithdrawal(tx.id)}
+                          >
+                            Approve & Pay
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-red-200 text-red-600 hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950/20"
+                            onClick={() => handleRejectWithdrawal(tx.id)}
+                          >
+                            Reject
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="text-center py-16 text-gray-500">
+                <CircleDollarSign size={48} className="mx-auto text-gray-300 mb-3 animate-pulse" />
+                <p className="font-medium">No pending withdrawal requests.</p>
+                <p className="text-xs text-gray-400 mt-1">When users request a withdrawal from their wallet, it will appear here for review.</p>
+              </div>
+            )}
+          </CardBody>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Sleek Credit Card / Wallet Dashboard */}
         <div className="lg:col-span-1 space-y-6">
@@ -747,6 +1020,9 @@ export const PaymentsPage: React.FC = () => {
                                            (tx.type === 'transfer' && tx.recipientId?.id === user.id) ||
                                            (tx.type === 'escrow_release' && tx.recipientId?.id === user.id);
                           
+                          const isIncomingEscrow = (tx.type === 'escrow' && tx.recipientId?.id === user.id);
+                          const isPendingWithdraw = (tx.type === 'withdraw' && tx.status === 'pending');
+                          
                           // Compute description
                           let description = '';
                           if (tx.type === 'deposit') {
@@ -789,18 +1065,38 @@ export const PaymentsPage: React.FC = () => {
                               <td className="px-6 py-4 capitalize text-gray-500 dark:text-gray-400">
                                 {tx.type.replace('_', ' ')}
                               </td>
-                              <td className={`px-6 py-4 font-semibold ${isIncome ? 'text-success-600' : 'text-error-600'}`}>
-                                {isIncome ? '+' : '-'}{formatLocalCurrency(tx.amount)}
+                              <td className={`px-6 py-4 font-semibold ${
+                                isIncomingEscrow
+                                  ? 'text-indigo-600 dark:text-indigo-400' 
+                                  : isPendingWithdraw
+                                  ? 'text-amber-600 dark:text-amber-500'
+                                  : isIncome 
+                                  ? 'text-success-600' 
+                                  : 'text-error-600'
+                              }`}>
+                                {isIncomingEscrow 
+                                  ? '• ' 
+                                  : isPendingWithdraw 
+                                  ? '• ' 
+                                  : isIncome 
+                                  ? '+' 
+                                  : '-'
+                                }
+                                {formatLocalCurrency(tx.amount)}
+                                {isIncomingEscrow && <span className="text-[10px] block font-normal text-indigo-500 dark:text-indigo-400">(Held in Escrow)</span>}
+                                {isPendingWithdraw && <span className="text-[10px] block font-normal text-amber-500">(Pending Review)</span>}
                               </td>
                               <td className="px-6 py-4">
-                                <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                                <span className={`px-2 py-1 text-xs font-semibold rounded-full uppercase tracking-wide ${
                                   tx.status === 'completed' 
                                     ? 'bg-success-50 text-success-700 dark:bg-success-900/20 dark:text-success-300' 
                                     : tx.status === 'held'
                                     ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-300'
-                                    : 'bg-warning-50 text-warning-700 dark:bg-warning-900/20 dark:text-warning-300'
+                                    : tx.status === 'pending'
+                                    ? 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300'
+                                    : 'bg-error-50 text-error-700 dark:bg-error-900/20 dark:text-error-300'
                                 }`}>
-                                  {tx.status}
+                                  {tx.status === 'pending' ? 'pending approval' : tx.status}
                                 </span>
                               </td>
                             </tr>
@@ -977,7 +1273,7 @@ export const PaymentsPage: React.FC = () => {
                                 {user.role === 'entrepreneur' && (isPendingProposed || isInProgress) && (
                                   <Button
                                     size="sm"
-                                    onClick={() => handleMarkComplete(m.id)}
+                                    onClick={() => triggerMarkComplete(m.id)}
                                   >
                                     Mark as Complete
                                   </Button>
@@ -986,7 +1282,7 @@ export const PaymentsPage: React.FC = () => {
                                 {user.role === 'investor' && isCompleted && (
                                   <Button
                                     size="sm"
-                                    onClick={() => handleReleaseEscrow(m.id, m.title, m.targetAmount)}
+                                    onClick={() => triggerReleaseEscrow(m.id, m.title, m.targetAmount)}
                                     className="bg-green-600 hover:bg-green-700 text-white"
                                   >
                                     Approve & Release
@@ -1012,9 +1308,10 @@ export const PaymentsPage: React.FC = () => {
           </Card>
         </div>
       </div>
+      )}
 
       {/* MODALS */}
-      {/* 1. Deposit (Stripe Checkout mockup) */}
+      {/* 1. Deposit (Stripe Checkout) */}
       {activeModal === 'deposit' && (
         <div className="fixed inset-0 bg-gray-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <Card className="w-full max-w-md shadow-2xl border-none">
@@ -1028,58 +1325,30 @@ export const PaymentsPage: React.FC = () => {
               </button>
             </CardHeader>
             <CardBody className="p-6">
-              <form onSubmit={handleDeposit} className="space-y-4">
-                <div className="bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-800/50 p-3 rounded-lg flex items-center gap-2 text-xs text-indigo-800 dark:text-indigo-300">
-                  <ShieldCheck size={16} className="text-indigo-600 flex-shrink-0" />
-                  <span>You are operating in Stripe Sandbox mode. Dummy cards will work automatically.</span>
-                </div>
-
-                <Input
-                  label={`Amount to Deposit (${currency})`}
-                  type="number"
-                  placeholder={`e.g. ${Math.ceil(100 * exchangeRate)}`}
-                  min={Math.ceil(5 * exchangeRate)}
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  required
-                  fullWidth
+              <Elements stripe={stripePromise}>
+                <StripeDepositForm
+                  exchangeRate={exchangeRate}
+                  currency={currency}
+                  formatLocalCurrency={formatLocalCurrency}
+                  onClose={() => setActiveModal('none')}
+                  onSuccess={(newBalance, tx) => {
+                    setBalance(newBalance);
+                    setReceiptData({
+                      id: tx?.id || tx?._id || 'dep_' + Math.random().toString(36).substring(2, 6),
+                      type: 'deposit',
+                      amount: tx.amount * exchangeRate, // Convert back to local currency for receipt
+                      recipientName: 'Your Nexus Wallet',
+                      senderName: 'Stripe Sandbox',
+                      date: format(new Date(tx?.createdAt || Date.now()), 'dd MMM yyyy, hh:mm a'),
+                      status: tx?.status || 'completed'
+                    });
+                    setActiveModal('none');
+                    setAmount('');
+                    fetchHistory();
+                    setShowReceipt(true);
+                  }}
                 />
-
-                <div className="space-y-2 border-t border-gray-100 dark:border-gray-800 pt-4">
-                  <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Payment Details</h4>
-                  <Input
-                    label="Card Number"
-                    value={cardNumber}
-                    onChange={(e) => setCardNumber(e.target.value)}
-                    required
-                    fullWidth
-                  />
-                  <div className="grid grid-cols-2 gap-3">
-                    <Input
-                      label="Expiry Date"
-                      value={cardExpiry}
-                      onChange={(e) => setCardExpiry(e.target.value)}
-                      required
-                    />
-                    <Input
-                      label="CVC"
-                      type="password"
-                      value={cardCvc}
-                      onChange={(e) => setCardCvc(e.target.value)}
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="flex gap-3 border-t border-gray-100 dark:border-gray-800 pt-4">
-                  <Button variant="outline" type="button" fullWidth onClick={() => setActiveModal('none')}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" fullWidth isLoading={isSubmitting}>
-                    Deposit Funds
-                  </Button>
-                </div>
-              </form>
+              </Elements>
             </CardBody>
           </Card>
         </div>
@@ -1101,6 +1370,7 @@ export const PaymentsPage: React.FC = () => {
                   label={`Amount to Withdraw (${currency})`}
                   type="number"
                   placeholder={`e.g. ${Math.ceil(50 * exchangeRate)}`}
+                  min={Math.ceil(10 * exchangeRate)}
                   max={balance * exchangeRate}
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
@@ -1111,15 +1381,35 @@ export const PaymentsPage: React.FC = () => {
                 <Input
                   label="Bank Account Routing/IBAN"
                   placeholder="US12345678901234"
+                  value={iban}
+                  onChange={(e) => setIban(e.target.value)}
                   required
                   fullWidth
                 />
+
+                {/* Professional fee and limits summary */}
+                <div className="bg-gray-50 dark:bg-gray-900/60 border border-gray-200 dark:border-gray-800 rounded-lg p-3 space-y-1.5 text-xs">
+                  <div className="flex justify-between text-gray-600 dark:text-gray-400">
+                    <span>Minimum Amount</span>
+                    <span className="font-semibold text-gray-900 dark:text-white">{formatLocalCurrency(10 * exchangeRate)} ($10.00 USD)</span>
+                  </div>
+                  <div className="flex justify-between text-gray-600 dark:text-gray-400">
+                    <span>Processing Fee</span>
+                    <span className="font-semibold text-error-600 dark:text-error-400">+{formatLocalCurrency(1 * exchangeRate)} ($1.00 USD)</span>
+                  </div>
+                  {parseFloat(amount) > 0 && (
+                    <div className="flex justify-between pt-1.5 border-t border-gray-200 dark:border-gray-700 font-semibold text-xs">
+                      <span className="text-gray-900 dark:text-white font-medium">Total Reserved From Balance</span>
+                      <span className="text-gray-900 dark:text-white font-bold">{formatLocalCurrency((parseFloat(amount) || 0) + 1 * exchangeRate)}</span>
+                    </div>
+                  )}
+                </div>
 
                 <div className="flex gap-3 border-t border-gray-100 dark:border-gray-800 pt-4">
                   <Button variant="outline" type="button" fullWidth onClick={() => setActiveModal('none')}>
                     Cancel
                   </Button>
-                  <Button type="submit" fullWidth isLoading={isSubmitting} className="bg-error-600 hover:bg-error-700 text-white">
+                  <Button type="submit" fullWidth isLoading={isSubmitting} className="bg-error-650 hover:bg-error-700 text-white">
                     Request Withdrawal
                   </Button>
                 </div>
@@ -1425,12 +1715,23 @@ export const PaymentsPage: React.FC = () => {
                 <p className="text-[10px] text-indigo-500 dark:text-indigo-300 font-medium tracking-widest uppercase">Secure Payments & Escrow</p>
               </div>
 
-              {/* Checkmark icon */}
-              <div className="w-16 h-16 bg-emerald-50 dark:bg-emerald-500/20 text-emerald-500 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30 rounded-full flex items-center justify-center mb-4 mt-2">
-                <CheckCircle size={32} className="animate-bounce" />
-              </div>
+              {/* Status icon */}
+              {receiptData.status === 'pending' ? (
+                <div className="w-16 h-16 bg-amber-50 dark:bg-amber-500/20 text-amber-500 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30 rounded-full flex items-center justify-center mb-4 mt-2">
+                  <History size={32} className="animate-spin animate-infinite" style={{ animationDuration: '3s' }} />
+                </div>
+              ) : (
+                <div className="w-16 h-16 bg-emerald-50 dark:bg-emerald-500/20 text-emerald-500 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30 rounded-full flex items-center justify-center mb-4 mt-2">
+                  <CheckCircle size={32} className="animate-bounce" />
+                </div>
+              )}
               
-              <span className="text-emerald-600 dark:text-emerald-400 text-xs font-semibold tracking-wider uppercase mb-1">Transaction Successful</span>
+              <span className={receiptData.status === 'pending' 
+                ? "text-amber-600 dark:text-amber-400 text-xs font-semibold tracking-wider uppercase mb-1" 
+                : "text-emerald-600 dark:text-emerald-400 text-xs font-semibold tracking-wider uppercase mb-1"
+              }>
+                {receiptData.status === 'pending' ? 'Withdrawal Pending Approval' : 'Transaction Successful'}
+              </span>
               <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white mb-6">
                 {formatLocalCurrency(receiptData.amount)}
               </h2>
@@ -1474,6 +1775,68 @@ export const PaymentsPage: React.FC = () => {
                   className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-600/30"
                 >
                   Download Receipt
+                </Button>
+              </div>
+            </CardBody>
+          </Card>
+        </div>
+      )}
+
+      {/* 6. Custom Confirmation Modal */}
+      {confirmModal.isOpen && (
+        <div className="fixed inset-0 bg-gray-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <Card className="w-full max-w-md shadow-2xl border border-gray-150 dark:border-gray-800 bg-white dark:bg-gray-950 text-gray-900 dark:text-white rounded-2xl overflow-hidden animate-scale-up">
+            <CardBody className="p-6 text-center">
+              <div className="mx-auto w-12 h-12 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-650 dark:text-indigo-400 rounded-full flex items-center justify-center mb-4">
+                <ShieldCheck size={26} />
+              </div>
+              
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+                {confirmModal.type === 'complete' ? 'Confirm Completion' : 'Approve & Release Funds'}
+              </h3>
+              
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+                {confirmModal.type === 'complete' 
+                  ? 'Are you sure you want to mark this milestone as completed? This will notify the investor to release the locked funds.'
+                  : `Are you sure you want to approve and release ${formatLocalCurrency(confirmModal.amount || 0)} for the milestone "${confirmModal.title}"? This action is irreversible.`}
+              </p>
+              
+              <div className="flex gap-3">
+                <Button 
+                  variant="outline" 
+                  fullWidth 
+                  onClick={() => setConfirmModal({ isOpen: false, type: 'none', milestoneId: '' })}
+                  disabled={isSubmitting}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  fullWidth 
+                  onClick={async () => {
+                    setIsSubmitting(true);
+                    try {
+                      if (confirmModal.type === 'complete') {
+                        await api.put(`/milestones/${confirmModal.milestoneId}/complete`);
+                        toast.success('Milestone marked completed. Investor has been notified.');
+                        fetchMilestones();
+                      } else {
+                        const response = await api.post(`/milestones/${confirmModal.milestoneId}/release`);
+                        setBalance(response.data.balance);
+                        toast.success('Escrow funds successfully released to startup wallet!');
+                        fetchHistory();
+                        fetchMilestones();
+                      }
+                      setConfirmModal({ isOpen: false, type: 'none', milestoneId: '' });
+                    } catch (error: any) {
+                      toast.error(error.response?.data?.message || 'Operation failed.');
+                    } finally {
+                      setIsSubmitting(false);
+                    }
+                  }}
+                  isLoading={isSubmitting}
+                  className={confirmModal.type === 'complete' ? 'bg-indigo-600 hover:bg-indigo-750 text-white' : 'bg-green-600 hover:bg-green-700 text-white'}
+                >
+                  Confirm
                 </Button>
               </div>
             </CardBody>
