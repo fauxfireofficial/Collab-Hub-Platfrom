@@ -260,4 +260,19 @@ router.put('/connect/requests/:id', auth, async (req, res) => {
   }
 });
 
+// @route   GET /api/users/admin-id
+// @desc    Get the primary admin ID for support chat
+router.get('/admin-id', async (req, res) => {
+  try {
+    const admin = await User.findOne({ email: 'nexus@admin.com' });
+    if (!admin) {
+      return res.status(404).json({ message: 'Support Admin not found' });
+    }
+    res.json({ adminId: admin._id });
+  } catch (error) {
+    console.error('Get admin ID error:', error);
+    res.status(500).json({ message: 'Server error retrieving admin id' });
+  }
+});
+
 export default router;

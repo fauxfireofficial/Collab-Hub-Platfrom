@@ -15,6 +15,10 @@ import paymentRoutes from './routes/payments.js';
 import chatRoutes from './routes/chat.js';
 import notificationRoutes from './routes/notifications.js';
 import milestoneRoutes from './routes/milestones.js';
+import adminRoutes from './routes/admin.js';
+import helpRoutes from './routes/help.js';
+import User from './models/User.js';
+import bcrypt from 'bcryptjs';
 
 
 const app = express();
@@ -65,6 +69,8 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/milestones', milestoneRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/help', helpRoutes);
 
 // Root route for health check
 app.get('/', (req, res) => {
@@ -151,9 +157,40 @@ if (!MONGO_URI) {
   process.exit(1);
 }
 
+const seedAdmin = async () => {
+  try {
+    const adminEmail = 'nexus@admin.com';
+    const existingAdmin = await User.findOne({ email: adminEmail });
+    if (!existingAdmin) {
+      const hashedPassword = await bcrypt.hash('admin@123', 10);
+      const adminUser = new User({
+        name: 'Nexus Admin',
+        email: adminEmail,
+        password: hashedPassword,
+        role: 'admin',
+        avatarUrl: `https://ui-avatars.com/api/?name=Nexus+Admin&background=4f46e5&color=fff`,
+        isOnline: false,
+        isVerified: true,
+        walletBalance: 0
+      });
+      await adminUser.save();
+      console.log('SUCCESS: Seeded admin user nexus@admin.com / admin@123');
+    } else {
+      if (existingAdmin.role !== 'admin') {
+        existingAdmin.role = 'admin';
+        await existingAdmin.save();
+        console.log('SUCCESS: Updated existing nexus@admin.com user role to admin');
+      }
+    }
+  } catch (err) {
+    console.error('Error seeding admin user:', err);
+  }
+};
+
 mongoose.connect(MONGO_URI)
-  .then(() => {
+  .then(async () => {
     console.log('SUCCESS: Connected to MongoDB Atlas Cloud Database.');
+    await seedAdmin();
     server.listen(PORT, () => {
       console.log(`SUCCESS: Server is running on port ${PORT}`);
     });

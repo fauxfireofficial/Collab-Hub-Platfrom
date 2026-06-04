@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { Menu, X, Bell, MessageCircle, User, LogOut, Building2, CircleDollarSign } from 'lucide-react';
+import { Menu, X, Bell, MessageCircle, User, LogOut, Building2, CircleDollarSign, Shield } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { Avatar } from '../ui/Avatar';
@@ -25,6 +25,8 @@ export const Navbar: React.FC = () => {
   // User dashboard route based on role
   const dashboardRoute = user?.role === 'entrepreneur'
     ? '/dashboard/entrepreneur'
+    : user?.role === 'admin'
+    ? '/dashboard/admin'
     : '/dashboard/investor';
 
   // User profile route
@@ -36,7 +38,11 @@ export const Navbar: React.FC = () => {
 
   const navLinks = [
     {
-      icon: user?.role === 'entrepreneur' ? <Building2 size={18} /> : <CircleDollarSign size={18} />,
+      icon: user?.role === 'entrepreneur' 
+        ? <Building2 size={18} /> 
+        : user?.role === 'admin'
+        ? <Shield size={18} />
+        : <CircleDollarSign size={18} />,
       text: 'Dashboard',
       path: dashboardRoute,
     },

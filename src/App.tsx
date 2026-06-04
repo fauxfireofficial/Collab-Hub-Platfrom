@@ -19,6 +19,7 @@ import { AuthThemeGuard } from './components/layout/AuthThemeGuard';
 // Dashboard Pages
 import { EntrepreneurDashboard } from './pages/dashboard/EntrepreneurDashboard';
 import { InvestorDashboard } from './pages/dashboard/InvestorDashboard';
+import { AdminDashboard } from './pages/dashboard/AdminDashboard';
 
 // Profile Pages
 import { EntrepreneurProfile } from './pages/profile/EntrepreneurProfile';
@@ -46,6 +47,7 @@ import { VideoCallPage } from './pages/video/VideoCallPage';
 const RootRedirect = () => {
   const { user } = useAuth();
   if (!user) return <Navigate to="/login" replace />;
+  if (user.role === 'admin') return <Navigate to="/dashboard/admin" replace />;
   return <Navigate to={user.role === 'investor' ? '/dashboard/investor' : '/dashboard/entrepreneur'} replace />;
 };
 
@@ -76,6 +78,7 @@ function App() {
           <Route path="/dashboard" element={<DashboardLayout />}>
             <Route path="entrepreneur" element={<EntrepreneurDashboard />} />
             <Route path="investor" element={<InvestorDashboard />} />
+            <Route path="admin" element={<AdminDashboard />} />
           </Route>
           
           {/* Profile Routes */}

@@ -76,6 +76,10 @@ const sendVerificationEmail = async (email, otp) => {
 router.post('/register', async (req, res) => {
   const { name, email, password, role } = req.body;
   try {
+    if (role === 'admin') {
+      return res.status(400).json({ message: 'Cannot register with administrator privileges.' });
+    }
+
     let user = await User.findOne({ email });
     if (user) {
       return res.status(400).json({ message: 'User already exists with this email' });

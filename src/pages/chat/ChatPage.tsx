@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { 
   Send, Video, Info, ArrowLeft, Paperclip, FileSpreadsheet, 
   Scale, Image as ImageIcon, FileText, X, Loader2, Mic, Trash2, 
-  Play, Pause, CheckCircle, CircleDollarSign, Layers, Lock, ShieldCheck, Briefcase, Calendar
+  Play, Pause, CheckCircle, CircleDollarSign, Layers, Lock, ShieldCheck, Briefcase, Calendar, Bot
 } from 'lucide-react';
 import { Avatar } from '../../components/ui/Avatar';
 import { Button } from '../../components/ui/Button';
@@ -693,6 +693,34 @@ export const ChatPage: React.FC = () => {
     }
   };
 
+  const handleSendBotOption = async (option: string) => {
+    const text = `I need help with: ${option}`;
+    if (!currentUser || !userId) return;
+    
+    try {
+      const res = await api.post('/chat/send', {
+        receiverId: userId,
+        content: text
+      });
+      
+      const sentMsg = {
+        id: res.data._id || res.data.id,
+        senderId: res.data.senderId,
+        receiverId: res.data.receiverId,
+        content: res.data.content,
+        timestamp: res.data.createdAt || res.data.timestamp,
+        isRead: res.data.isRead,
+        isEdited: res.data.isEdited || false
+      };
+
+      isAtBottomRef.current = true;
+      setMessages(prev => [...prev, sentMsg]);
+      fetchConversations();
+    } catch (err) {
+      console.error('Error sending message:', err);
+    }
+  };
+
   const handleEditMessage = async (messageId: string, newContent: string) => {
     try {
       const res = await api.put(`/chat/message/${messageId}`, { content: newContent });
@@ -924,8 +952,42 @@ export const ChatPage: React.FC = () => {
                 onScroll={handleMessagesScroll}
                 className="flex-1 p-4 overflow-y-auto bg-gray-50/50 dark:bg-gray-900/50"
               >
-                {messages.length > 0 ? (
+                {messages.length > 0 || (chatPartner && chatPartner.role === 'admin') ? (
                   <div className="space-y-4">
+                    {/* Support Bot Greeting */}
+                    {chatPartner && chatPartner.role === 'admin' && (
+                      <div className="flex justify-start mb-6 w-full animate-fade-in">
+                        <div className="flex gap-3 max-w-[85%] relative">
+                          <div className="shrink-0 w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow-sm">
+                            <Bot size={16} />
+                          </div>
+                          <div>
+                            <span className="text-xs text-gray-500 mb-1 ml-1 block font-medium">Nexus Support Bot</span>
+                            <div className="bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 p-4 rounded-2xl rounded-tl-none shadow-sm border border-gray-100 dark:border-gray-700">
+                              <p className="mb-3 text-sm">Hello! I am the Nexus Support Bot. Please select the category that best describes your issue so we can direct you to the right admin:</p>
+                              <div className="flex flex-col gap-2">
+                                {[
+                                  "Payment or Wallet Issue",
+                                  "Profile or Account Settings",
+                                  "Escrow or Contract Dispute",
+                                  "Report a Bug",
+                                  "Other"
+                                ].map((option) => (
+                                  <button 
+                                    key={option}
+                                    type="button"
+                                    onClick={() => handleSendBotOption(option)}
+                                    className="text-left px-4 py-2 bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 text-indigo-700 dark:text-indigo-400 text-xs font-semibold rounded-lg transition-colors border border-indigo-100 dark:border-indigo-800/30"
+                                  >
+                                    {option}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                     {messages.map(message => (
                       <ChatMessage
                         key={message.id}
@@ -944,7 +1006,7 @@ export const ChatPage: React.FC = () => {
                 ) : (
                   <div className="h-full flex flex-col items-center justify-center">
                     <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-full mb-4">
-                      <MessageCircle size={32} className="text-gray-400 dark:text-gray-500" />
+                      <MessageCircle size={32} className="text-gray-400 dark:bg-gray-500" />
                     </div>
                     <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300">{t('No messages yet')}</h3>
                     <p className="text-gray-500 dark:text-gray-400 mt-1">{t('Send a message to start the conversation')}</p>

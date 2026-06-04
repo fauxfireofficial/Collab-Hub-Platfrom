@@ -40,7 +40,13 @@ export const LoginPage: React.FC = () => {
         setIsLoading(false);
       } else {
         const userRole = res?.role || 'entrepreneur';
-        navigate(userRole === 'entrepreneur' ? '/dashboard/entrepreneur' : '/dashboard/investor');
+        if (userRole === 'admin') {
+          navigate('/dashboard/admin');
+        } else if (userRole === 'investor') {
+          navigate('/dashboard/investor');
+        } else {
+          navigate('/dashboard/entrepreneur');
+        }
       }
     } catch (err) {
       setError((err as Error).message);
@@ -56,7 +62,13 @@ export const LoginPage: React.FC = () => {
     try {
       const res = await verify2FA(tempUserId, otpCode);
       const userRole = res?.role || 'entrepreneur';
-      navigate(userRole === 'entrepreneur' ? '/dashboard/entrepreneur' : '/dashboard/investor');
+      if (userRole === 'admin') {
+        navigate('/dashboard/admin');
+      } else if (userRole === 'investor') {
+        navigate('/dashboard/investor');
+      } else {
+        navigate('/dashboard/entrepreneur');
+      }
     } catch (err) {
       setError((err as Error).message);
       setIsLoading(false);
@@ -71,7 +83,13 @@ export const LoginPage: React.FC = () => {
     try {
       const res = await verifyEmail(tempUserId, otpCode);
       const userRole = res?.role || 'entrepreneur';
-      navigate(userRole === 'entrepreneur' ? '/dashboard/entrepreneur' : '/dashboard/investor');
+      if (userRole === 'admin') {
+        navigate('/dashboard/admin');
+      } else if (userRole === 'investor') {
+        navigate('/dashboard/investor');
+      } else {
+        navigate('/dashboard/entrepreneur');
+      }
     } catch (err) {
       setError((err as Error).message);
       setIsLoading(false);

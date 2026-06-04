@@ -4,7 +4,7 @@ import Milestone from '../models/Milestone.js';
 import User from '../models/User.js';
 import Notification from '../models/Notification.js';
 import { createNotification } from './notifications.js';
-import { auth } from '../middleware/auth.js';
+import { auth, adminAuth } from '../middleware/auth.js';
 import Stripe from 'stripe';
 
 const router = express.Router();
@@ -169,7 +169,7 @@ router.post('/withdraw', auth, async (req, res) => {
 
 // @route   GET /api/payments/withdraw/pending
 // @desc    Get all pending withdrawal requests (Admin use)
-router.get('/withdraw/pending', auth, async (req, res) => {
+router.get('/withdraw/pending', auth, adminAuth, async (req, res) => {
   try {
     // In a production app, we would restrict this to admin users.
     // For development and testing role-switching simulator, we allow authenticated users.
@@ -189,7 +189,7 @@ router.get('/withdraw/pending', auth, async (req, res) => {
 
 // @route   POST /api/payments/withdraw/approve/:id
 // @desc    Approve a pending withdrawal, deduct wallet balance and execute Stripe payout
-router.post('/withdraw/approve/:id', auth, async (req, res) => {
+router.post('/withdraw/approve/:id', auth, adminAuth, async (req, res) => {
   try {
     const tx = await Transaction.findById(req.params.id);
     if (!tx || tx.type !== 'withdraw' || tx.status !== 'pending') {
@@ -269,7 +269,7 @@ router.post('/withdraw/approve/:id', auth, async (req, res) => {
 
 // @route   POST /api/payments/withdraw/reject/:id
 // @desc    Reject a pending withdrawal request
-router.post('/withdraw/reject/:id', auth, async (req, res) => {
+router.post('/withdraw/reject/:id', auth, adminAuth, async (req, res) => {
   try {
     const tx = await Transaction.findById(req.params.id);
     if (!tx || tx.type !== 'withdraw' || tx.status !== 'pending') {

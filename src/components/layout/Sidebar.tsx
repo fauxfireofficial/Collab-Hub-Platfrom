@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { 
   Home, Building2, CircleDollarSign, Users, MessageCircle, 
-  FileText, Settings, HelpCircle, Calendar
+  FileText, Settings, HelpCircle, Calendar, Shield
 } from 'lucide-react';
 
 interface SidebarItemProps {
@@ -59,7 +59,20 @@ export const Sidebar: React.FC = () => {
   ];
 
   
-  const sidebarItems = user.role === 'entrepreneur' ? entrepreneurItems : investorItems;
+  const adminItems = [
+    { to: '/dashboard/admin', icon: <Shield size={20} />, text: 'Admin Portal' },
+    { to: '/payments', icon: <CircleDollarSign size={20} />, text: 'Wallet & Payments' },
+    { to: '/chat', icon: <MessageCircle size={20} />, text: 'Messages' },
+  ];
+  
+  let sidebarItems = [];
+  if (user.role === 'admin') {
+    sidebarItems = adminItems;
+  } else if (user.role === 'entrepreneur') {
+    sidebarItems = entrepreneurItems;
+  } else {
+    sidebarItems = investorItems;
+  }
   
   // Common items at the bottom
   const commonItems = [

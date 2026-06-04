@@ -789,17 +789,19 @@ export const PaymentsPage: React.FC = () => {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Wallet & Payments</h1>
           <p className="text-gray-600 dark:text-gray-400">Simulate investments, make deposits via Stripe sandbox, and manage escrow milestones</p>
         </div>
-        <button
-          onClick={() => setIsAdminView(!isAdminView)}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-semibold transition-all shadow-sm ${
-            isAdminView 
-              ? 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100 dark:bg-red-950/30 dark:text-red-400 dark:border-red-900/50'
-              : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50 dark:bg-gray-905 dark:text-gray-350 dark:border-gray-800 dark:hover:bg-gray-800'
-          }`}
-        >
-          <span>🔧</span>
-          {isAdminView ? 'Switch to User View' : 'Developer Admin Portal'}
-        </button>
+        {user.role === 'admin' && (
+          <button
+            onClick={() => setIsAdminView(!isAdminView)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-semibold transition-all shadow-sm ${
+              isAdminView 
+                ? 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100 dark:bg-red-950/30 dark:text-red-400 dark:border-red-900/50'
+                : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50 dark:bg-gray-905 dark:text-gray-350 dark:border-gray-800 dark:hover:bg-gray-800'
+            }`}
+          >
+            <span>🔧</span>
+            {isAdminView ? 'Switch to User View' : 'Developer Admin Portal'}
+          </button>
+        )}
       </div>
 
       {isAdminView ? (
