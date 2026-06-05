@@ -13,6 +13,7 @@ const userSchema = new mongoose.Schema({
   isTwoFactorEnabled: { type: Boolean, default: false },
   isVerified: { type: Boolean, default: false },
   verificationCode: { type: String },
+  supportSessionActive: { type: Boolean, default: false },
   
   // Entrepreneur-specific fields
   startupName: { type: String, default: '' },

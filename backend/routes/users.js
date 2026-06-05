@@ -1,6 +1,8 @@
 import express from 'express';
 import User from '../models/User.js';
 import CollaborationRequest from '../models/CollaborationRequest.js';
+import Message from '../models/Message.js';
+import SupportArchive from '../models/SupportArchive.js';
 import { auth } from '../middleware/auth.js';
 import { createNotification } from './notifications.js';
 import multer from 'multer';
@@ -272,6 +274,98 @@ router.get('/admin-id', async (req, res) => {
   } catch (error) {
     console.error('Get admin ID error:', error);
     res.status(500).json({ message: 'Server error retrieving admin id' });
+  }
+});
+
+// @route   POST /api/users/support/start
+// @desc    Start a support session for the current user
+router.post('/support/start', auth, async (req, res) => {
+  try {
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { $set: { supportSessionActive: true } },
+      { new: true }
+    );
+    res.json({ message: 'Support session started', supportSessionActive: user.supportSessionActive });
+  } catch (error) {
+    console.error('Start support session error:', error);
+    res.status(500).json({ message: 'Server error starting support session' });
+  }
+});
+
+// @route   POST /api/users/support/end
+// @desc    End a support session for a user, archive chat, and mark closed
+router.post('/support/end', auth, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Only admins can end a support session' });
+    }
+    const { userId } = req.body;
+    if (!userId) {
+      return res.status(400).json({ message: 'User ID is required' });
+    }
+    
+    // 1. Mark user's session as inactive
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { $set: { supportSessionActive: false } },
+      { new: true }
+    );
+
+    // 2. Fetch all messages between admin and user
+    const messages = await Message.find({
+      $or: [
+        { senderId: req.user._id, receiverId: userId },
+        { senderId: userId, receiverId: req.user._id }
+      ]
+    }).sort({ createdAt: 1 });
+
+    if (messages.length > 0) {
+      // 3. Create SupportArchive
+      const archiveData = {
+        userId: userId,
+        adminId: req.user._id,
+        messages: messages.map(m => ({
+          senderId: m.senderId,
+          receiverId: m.receiverId,
+          content: m.content,
+          isEdited: m.isEdited,
+          timestamp: m.createdAt
+        })),
+        status: 'closed',
+        closedAt: new Date()
+      };
+      const archive = new SupportArchive(archiveData);
+      await archive.save();
+
+      // 4. Delete messages from active queue
+      await Message.deleteMany({
+        _id: { $in: messages.map(m => m._id) }
+      });
+    }
+
+    res.json({ message: 'Support session ended and archived', supportSessionActive: user?.supportSessionActive });
+  } catch (error) {
+    console.error('End support session error:', error);
+    res.status(500).json({ message: 'Server error ending support session' });
+  }
+});
+
+// @route   GET /api/users/support/archives/:userId
+// @desc    Get past support archives for a user
+router.get('/support/archives/:userId', auth, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Only admins can view support archives' });
+    }
+    const archives = await SupportArchive.find({ userId: req.params.userId })
+      .populate('adminId', 'name email avatarUrl')
+      .sort({ closedAt: -1 });
+    
+    res.json(archives);
+  } catch (error) {
+    console.error('Get support archives error:', error);
+    res.status(500).json({ message: 'Server error retrieving support archives' });
   }
 });
 

@@ -105,6 +105,7 @@ export const AdminDashboard: React.FC = () => {
   const [milestones, setMilestones] = useState<MilestoneRecord[]>([]);
   const [pendingWithdrawals, setPendingWithdrawals] = useState<TransactionRecord[]>([]);
   const [tickets, setTickets] = useState<any[]>([]);
+  const [ticketSearchTerm, setTicketSearchTerm] = useState('');
 
   // Ticket Reply Modal
   const [ticketReplyModal, setTicketReplyModal] = useState<{
@@ -1010,22 +1011,39 @@ export const AdminDashboard: React.FC = () => {
               </h3>
               <p className="text-xs text-gray-550 dark:text-gray-405">Review user help requests and reply with email notifications.</p>
             </div>
-            <div className="flex gap-3 text-xs">
-              <span className="px-2 py-1 rounded bg-amber-50 text-amber-700 dark:bg-amber-950/20 dark:text-amber-400 font-semibold border border-amber-100 dark:border-amber-900/40">
-                Open: {tickets.filter(t => t.status === 'open').length}
-              </span>
-              <span className="px-2 py-1 rounded bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400 font-semibold border border-emerald-100 dark:border-emerald-900/40">
-                Replied: {tickets.filter(t => t.status === 'replied').length}
-              </span>
-              <span className="px-2 py-1 rounded bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400 font-semibold border border-gray-200 dark:border-gray-700">
-                Closed: {tickets.filter(t => t.status === 'closed').length}
-              </span>
+            <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center w-full sm:w-auto mt-3 sm:mt-0">
+              <div className="relative w-full sm:w-64">
+                <Input
+                  placeholder="Search by ID or Subject..."
+                  value={ticketSearchTerm}
+                  onChange={(e) => setTicketSearchTerm(e.target.value)}
+                  fullWidth
+                  startAdornment={<Search size={16} className="text-gray-400" />}
+                />
+              </div>
+              <div className="flex gap-2 text-xs w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0 hide-scrollbar">
+                <span className="px-2 py-1 rounded bg-amber-50 text-amber-700 dark:bg-amber-950/20 dark:text-amber-400 font-semibold border border-amber-100 dark:border-amber-900/40 whitespace-nowrap">
+                  Open: {tickets.filter(t => t.status === 'open').length}
+                </span>
+                <span className="px-2 py-1 rounded bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400 font-semibold border border-emerald-100 dark:border-emerald-900/40 whitespace-nowrap">
+                  Replied: {tickets.filter(t => t.status === 'replied').length}
+                </span>
+                <span className="px-2 py-1 rounded bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400 font-semibold border border-gray-200 dark:border-gray-700 whitespace-nowrap">
+                  Closed: {tickets.filter(t => t.status === 'closed').length}
+                </span>
+              </div>
             </div>
           </CardHeader>
           <CardBody className="p-0">
-            {tickets.length > 0 ? (
+            {tickets.filter(t => 
+              (t._id || t.id || '').toLowerCase().includes(ticketSearchTerm.toLowerCase()) || 
+              (t.subject || '').toLowerCase().includes(ticketSearchTerm.toLowerCase())
+            ).length > 0 ? (
               <div className="divide-y divide-gray-100 dark:divide-gray-800">
-                {tickets.map((ticket: any) => (
+                {tickets.filter(t => 
+                  (t._id || t.id || '').toLowerCase().includes(ticketSearchTerm.toLowerCase()) || 
+                  (t.subject || '').toLowerCase().includes(ticketSearchTerm.toLowerCase())
+                ).map((ticket: any) => (
                   <div key={ticket._id || ticket.id} className="p-5 hover:bg-gray-50/50 dark:hover:bg-gray-900/20 transition-colors">
                     <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
                       {/* Left: User info + ticket content */}
@@ -1033,13 +1051,13 @@ export const AdminDashboard: React.FC = () => {
                         <div className="flex items-center gap-3 mb-2">
                           <Avatar src={ticket.userId?.avatarUrl} alt={ticket.userId?.name || ticket.name} size="sm" />
                           <div>
-                            <div className="font-bold text-sm text-gray-900 dark:text-white">{ticket.userId?.name || ticket.name}</div>
-                            <div className="text-[10px] text-gray-400">{ticket.userId?.email || ticket.email} • {ticket.userId?.role || 'user'}</div>
+                            <div className="font-bold text-sm text-gray-900 dark:text-white break-words">{ticket.userId?.name || ticket.name}</div>
+                            <div className="text-[10px] text-gray-400 break-all">{ticket.userId?.email || ticket.email} • {ticket.userId?.role || 'user'}</div>
                           </div>
                         </div>
                         <div className="flex items-center gap-2 flex-wrap mb-1">
-                          <h4 className="text-sm font-bold text-gray-800 dark:text-gray-200">{ticket.subject}</h4>
-                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold rounded border uppercase tracking-wider ${
+                          <h4 className="text-sm font-bold text-gray-800 dark:text-gray-200 break-words max-w-full">{ticket.subject}</h4>
+                          <span className={`inline-flex shrink-0 items-center gap-1 px-2 py-0.5 text-[10px] font-bold rounded border uppercase tracking-wider ${
                             ticket.status === 'open'
                               ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900/50'
                               : ticket.status === 'replied'
@@ -1067,7 +1085,7 @@ export const AdminDashboard: React.FC = () => {
                       </div>
 
                       {/* Right: Actions + Date */}
-                      <div className="flex flex-col items-end gap-2 shrink-0">
+                      <div className="flex flex-col sm:items-end gap-2 shrink-0 mt-3 lg:mt-0">
                         <span className="text-[10px] text-gray-400">
                           {ticket.createdAt ? format(new Date(ticket.createdAt), 'MMM dd, yyyy • hh:mm a') : ''}
                         </span>

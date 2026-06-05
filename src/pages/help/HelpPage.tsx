@@ -175,7 +175,7 @@ export const HelpPage: React.FC = () => {
       </Card>
       
       {/* Submit Support Ticket Form */}
-      <Card className="border-indigo-100 dark:border-indigo-900/30">
+      <Card id="support-form" className="border-indigo-100 dark:border-indigo-900/30 scroll-mt-20">
         <CardHeader className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-t-xl">
           <div className="flex items-center gap-2">
             <Send size={20} />
@@ -279,9 +279,15 @@ export const HelpPage: React.FC = () => {
             </div>
           ) : (
             <div className="text-center py-12 text-gray-500">
-              <MessageSquareReply className="mx-auto w-8 h-8 text-gray-300 dark:text-gray-600 mb-3" />
-              <p className="font-semibold text-sm">No tickets submitted yet.</p>
-              <p className="text-xs text-gray-400 mt-1">Submit a support ticket above and it will appear here.</p>
+              <MessageSquareReply className="mx-auto w-10 h-10 text-indigo-300 dark:text-indigo-900/50 mb-4" />
+              <p className="font-bold text-gray-900 dark:text-white text-base">No tickets submitted yet</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-6">You haven't created any support requests.</p>
+              <Button 
+                onClick={() => document.getElementById('support-form')?.scrollIntoView({ behavior: 'smooth' })}
+                className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-400 dark:hover:bg-indigo-900/50"
+              >
+                Start a new support request
+              </Button>
             </div>
           )}
         </CardBody>

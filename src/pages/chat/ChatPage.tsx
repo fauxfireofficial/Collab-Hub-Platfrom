@@ -3,7 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { 
   Send, Video, Info, ArrowLeft, Paperclip, FileSpreadsheet, 
   Scale, Image as ImageIcon, FileText, X, Loader2, Mic, Trash2, 
-  Play, Pause, CheckCircle, CircleDollarSign, Layers, Lock, ShieldCheck, Briefcase, Calendar, Bot
+  Play, Pause, CheckCircle, CircleDollarSign, Layers, Lock, ShieldCheck, Briefcase, Calendar, Bot,
+  History, Archive, AlertCircle
 } from 'lucide-react';
 import { Avatar } from '../../components/ui/Avatar';
 import { Button } from '../../components/ui/Button';
@@ -34,6 +35,10 @@ export const ChatPage: React.FC = () => {
   const messagesContainerRef = useRef<null | HTMLDivElement>(null);
   const isAtBottomRef = useRef(true); // track if user is scrolled near bottom
   const [chatPartner, setChatPartner] = useState<any | null>(null);
+  const [isSupportActive, setIsSupportActive] = useState(false);
+  const [showBotOptions, setShowBotOptions] = useState(false);
+  const [showArchivesModal, setShowArchivesModal] = useState(false);
+  const [archivesList, setArchivesList] = useState<any[]>([]);
 
   // Info Sidebar State
   const [showInfoPanel, setShowInfoPanel] = useState(false);
@@ -611,7 +616,7 @@ export const ChatPage: React.FC = () => {
       if (userId) {
         try {
           const res = await api.get(`/chat/history/${userId}`);
-          setMessages(res.data.map((m: any) => ({
+          const newMessages = res.data.map((m: any) => ({
             id: m._id || m.id,
             senderId: m.senderId,
             receiverId: m.receiverId,
@@ -619,12 +624,28 @@ export const ChatPage: React.FC = () => {
             timestamp: m.createdAt || m.timestamp,
             isRead: m.isRead,
             isEdited: m.isEdited || false
-          })));
+          }));
 
+          setMessages(prev => {
+            if (JSON.stringify(prev) === JSON.stringify(newMessages)) {
+              return prev;
+            }
+            return newMessages;
+          });
           // Fetch partner details if not loaded
-          if (!chatPartner || (chatPartner._id !== userId && chatPartner.id !== userId)) {
+          let partnerData = chatPartner;
+          if (!chatPartner || (chatPartner._id !== userId && chatPartner.id !== userId) || currentUser.role === 'admin') {
             const partnerRes = await api.get(`/users/profile/${userId}`);
-            setChatPartner(partnerRes.data);
+            partnerData = partnerRes.data;
+            setChatPartner(partnerData);
+          }
+
+          // Fetch support session state if applicable
+          if (currentUser.role !== 'admin' && partnerData?.role === 'admin') {
+            const meRes = await api.get(`/users/profile/${currentUser.id}`);
+            setIsSupportActive(meRes.data.supportSessionActive);
+          } else if (currentUser.role === 'admin' && partnerData?.role !== 'admin') {
+            setIsSupportActive(partnerData?.supportSessionActive);
           }
         } catch (err) {
           console.error('Error fetching chat messages:', err);
@@ -715,9 +736,50 @@ export const ChatPage: React.FC = () => {
 
       isAtBottomRef.current = true;
       setMessages(prev => [...prev, sentMsg]);
+      setShowBotOptions(false);
       fetchConversations();
     } catch (err) {
       console.error('Error sending message:', err);
+    }
+  };
+
+  const handleStartSupport = async () => {
+    try {
+      await api.post('/users/support/start');
+      setIsSupportActive(true);
+      setShowBotOptions(true);
+    } catch (err) {
+      toast.error('Could not start support session');
+    }
+  };
+
+  const handleEndSupport = async () => {
+    try {
+      await api.post('/users/support/end', { userId: chatPartner?.id || chatPartner?._id });
+      setIsSupportActive(false);
+      
+      // Admin sends an automated closing message
+      await api.post('/chat/send', {
+        receiverId: chatPartner?.id || chatPartner?._id,
+        content: "Admin has closed this support session. If you need further assistance, please start a new chat."
+      });
+      
+      toast.success('Support session ended and archived');
+      // Update local messages array to clear it out since it's archived
+      setMessages([]);
+    } catch (err) {
+      toast.error('Could not end support session');
+    }
+  };
+
+  const fetchArchives = async () => {
+    if (!chatPartner) return;
+    try {
+      const res = await api.get(`/users/support/archives/${chatPartner.id || chatPartner._id}`);
+      setArchivesList(res.data);
+      setShowArchivesModal(true);
+    } catch (err) {
+      toast.error('Could not fetch archives');
     }
   };
 
@@ -933,7 +995,18 @@ export const ChatPage: React.FC = () => {
                   </div>
                 </div>
                 
-                <div className="flex space-x-2">
+                <div className="flex space-x-2 items-center">
+                  {currentUser.role === 'admin' && isSupportActive && (
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="rounded-full px-3 py-1 font-bold bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-950/30 dark:text-red-400 dark:hover:bg-red-900/40 border border-red-200 dark:border-red-900/50 shadow-sm transition-colors"
+                      onClick={handleEndSupport}
+                    >
+                      <X size={14} className="mr-1 inline" />
+                      End Chat
+                    </Button>
+                  )}
                   <Button
                     variant="ghost"
                     size="sm"
@@ -954,8 +1027,22 @@ export const ChatPage: React.FC = () => {
               >
                 {messages.length > 0 || (chatPartner && chatPartner.role === 'admin') ? (
                   <div className="space-y-4">
+
+                    {messages.map(message => (
+                      <ChatMessage
+                        key={message.id}
+                        message={message}
+                        isCurrentUser={message.senderId === currentUser.id}
+                        partnerAvatarUrl={chatPartner.avatarUrl}
+                        partnerName={chatPartner.name}
+                        currentUserAvatarUrl={currentUser.avatarUrl}
+                        currentUserName={currentUser.name}
+                        onEdit={handleEditMessage}
+                        onDelete={handleDeleteMessage}
+                      />
+                    ))}
                     {/* Support Bot Greeting */}
-                    {chatPartner && chatPartner.role === 'admin' && (
+                    {showBotOptions && (
                       <div className="flex justify-start mb-6 w-full animate-fade-in">
                         <div className="flex gap-3 max-w-[85%] relative">
                           <div className="shrink-0 w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow-sm">
@@ -988,19 +1075,6 @@ export const ChatPage: React.FC = () => {
                         </div>
                       </div>
                     )}
-                    {messages.map(message => (
-                      <ChatMessage
-                        key={message.id}
-                        message={message}
-                        isCurrentUser={message.senderId === currentUser.id}
-                        partnerAvatarUrl={chatPartner.avatarUrl}
-                        partnerName={chatPartner.name}
-                        currentUserAvatarUrl={currentUser.avatarUrl}
-                        currentUserName={currentUser.name}
-                        onEdit={handleEditMessage}
-                        onDelete={handleDeleteMessage}
-                      />
-                    ))}
                     <div ref={messagesEndRef} />
                   </div>
                 ) : (
@@ -1015,6 +1089,20 @@ export const ChatPage: React.FC = () => {
               </div>
               
               {/* Message input */}
+              {currentUser.role !== 'admin' && chatPartner?.role === 'admin' && !isSupportActive ? (
+                <div className="border-t border-gray-200 dark:border-gray-800 p-8 bg-white dark:bg-gray-900 flex flex-col justify-center items-center">
+                  <Bot size={40} className="text-indigo-200 dark:text-indigo-900/50 mb-3" />
+                  <p className="text-sm text-gray-500 mb-4 font-medium text-center">Start a support session to talk with our team.</p>
+                  <Button
+                    onClick={handleStartSupport}
+                    size="lg"
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-full px-8 py-2.5 font-bold shadow-md flex items-center gap-2"
+                  >
+                    <MessageCircle size={18} />
+                    Start Support Chat
+                  </Button>
+                </div>
+              ) : (
               <div className="border-t border-gray-200 dark:border-gray-800 p-4 bg-white dark:bg-gray-900 relative">
                 {/* Hidden file input */}
                 <input
@@ -1193,6 +1281,7 @@ export const ChatPage: React.FC = () => {
                   )}
                 </form>
               </div>
+              )}
             </>
           ) : (
             <div className="h-full flex flex-col items-center justify-center p-4 bg-gray-50/20 dark:bg-gray-900/50">
@@ -1344,6 +1433,25 @@ export const ChatPage: React.FC = () => {
                       </div>
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* Support Tools for Admin */}
+              {currentUser?.role === 'admin' && (
+                <div className="space-y-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+                  <h5 className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <History size={13} className="text-indigo-500" />
+                    {t('Support Management')}
+                  </h5>
+                  <Button 
+                    fullWidth 
+                    variant="outline"
+                    onClick={fetchArchives}
+                    className="flex items-center justify-center gap-2 border-indigo-200 text-indigo-600 hover:bg-indigo-50 dark:border-indigo-900/50 dark:text-indigo-400 dark:hover:bg-indigo-900/30"
+                  >
+                    <History size={16} />
+                    {t('View Past Sessions')}
+                  </Button>
                 </div>
               )}
 
@@ -1660,6 +1768,98 @@ export const ChatPage: React.FC = () => {
               </div>
             </CardBody>
           </Card>
+        </div>
+      )}
+
+      {/* Support Archives Modal */}
+      {showArchivesModal && (
+        <div className="fixed inset-0 bg-gray-950/70 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-2xl border border-gray-200 dark:border-gray-800 flex flex-col max-h-[85vh]">
+            {/* Header */}
+            <div className="flex justify-between items-center p-5 border-b border-gray-100 dark:border-gray-800">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center">
+                  <History size={16} className="text-indigo-600 dark:text-indigo-400" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900 dark:text-white text-sm">Past Support Sessions</h3>
+                  {chatPartner && <p className="text-xs text-gray-500 dark:text-gray-400">{chatPartner.name}</p>}
+                </div>
+              </div>
+              <button
+                onClick={() => setShowArchivesModal(false)}
+                className="p-1.5 rounded-full text-gray-400 hover:text-gray-700 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto p-5 space-y-5">
+              {archivesList.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 text-center">
+                  <div className="w-14 h-14 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-3">
+                    <Archive size={24} className="text-gray-400" />
+                  </div>
+                  <p className="text-gray-500 dark:text-gray-400 font-medium">No past sessions found</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Closed sessions will appear here</p>
+                </div>
+              ) : (
+                archivesList.map((archive: any, idx: number) => (
+                  <div key={archive._id} className="border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
+                    {/* Session Header */}
+                    <div className="flex justify-between items-center px-4 py-3 bg-gray-50 dark:bg-gray-800/50">
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded text-[10px] font-bold uppercase">Session #{archivesList.length - idx}</span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          {new Date(archive.createdAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-semibold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded">
+                        {archive.messages.length} messages
+                      </span>
+                    </div>
+
+                    {/* Messages */}
+                    <div className="p-4 space-y-2 max-h-64 overflow-y-auto bg-white dark:bg-gray-900">
+                      {archive.messages.map((msg: any, i: number) => {
+                        const isUserMsg = msg.senderId?.toString() === (chatPartner?.id || chatPartner?._id)?.toString();
+                        return (
+                          <div
+                            key={i}
+                            className={`flex ${ isUserMsg ? 'justify-start' : 'justify-end'}`}
+                          >
+                            <div className={`max-w-[75%] px-3 py-2 rounded-xl text-sm ${
+                              isUserMsg
+                                ? 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-tl-none'
+                                : 'bg-indigo-600 text-white rounded-tr-none'
+                            }`}>
+                              <p>{msg.content}</p>
+                              <p className={`text-[10px] mt-1 ${ isUserMsg ? 'text-gray-400' : 'text-indigo-200'}`}>
+                                {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t border-gray-100 dark:border-gray-800">
+              <Button
+                fullWidth
+                variant="outline"
+                onClick={() => setShowArchivesModal(false)}
+                className="text-gray-600 dark:text-gray-400"
+              >
+                Close
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </>
