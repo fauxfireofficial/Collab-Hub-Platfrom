@@ -73,7 +73,7 @@ cd Collab-Hub-Platfrom
     ```bash
     npm run dev
     ```
-    *The backend server will run on `http://localhost:5000`.*
+    *The backend server will run on `import.meta.env.VITE_API_URL`.*
 
 ---
 

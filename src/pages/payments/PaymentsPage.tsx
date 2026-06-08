@@ -1,21 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  CircleDollarSign, 
-  ArrowUpRight, 
-  ArrowDownLeft, 
-  Send, 
-  History, 
-  CreditCard, 
-  ShieldCheck, 
-  X, 
-  Calendar, 
-  Layers, 
-  Plus, 
-  CheckCircle, 
-  Lock, 
-  Unlock, 
-  Briefcase, 
-  FileText 
+import {
+  CircleDollarSign,
+  ArrowUpRight,
+  ArrowDownLeft,
+  Send,
+  History,
+  CreditCard,
+  ShieldCheck,
+  X,
+  Calendar,
+  Layers,
+  Plus,
+  CheckCircle,
+  Lock,
+  Unlock,
+  Briefcase,
+  FileText
 } from 'lucide-react';
 import { Card, CardHeader, CardBody } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -31,7 +31,7 @@ import { io } from 'socket.io-client';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY || '');
 
@@ -163,7 +163,12 @@ const StripeDepositForm: React.FC<StripeDepositFormProps> = ({
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
           Card Details
         </label>
-        <div className="p-3 border border-gray-300 dark:border-gray-750 bg-white dark:bg-gray-950 rounded-md focus-within:ring-2 focus-within:ring-primary-500 focus-within:border-primary-500 transition-all">
+        <div className="p-3 border border-gray-300 dark:border-gray-750 bg-white dark:bg-gray-950 rounded-md focus-within:ring-2 focus-within:ring-primary-500 focus-within:border-primary-500 transition-all relative">
+          {!stripe && (
+            <div className="absolute inset-0 flex items-center justify-center bg-white dark:bg-gray-950 rounded-md z-10">
+              <span className="text-xs text-gray-500 animate-pulse">Loading secure payment element... (Please ensure Stripe is not blocked)</span>
+            </div>
+          )}
           <CardElement
             options={{
               style: {
@@ -342,7 +347,7 @@ export const PaymentsPage: React.FC = () => {
     date: string;
     status: string;
   } | null>(null);
-  
+
   // Propose Milestone States
   const [proposeTitle, setProposeTitle] = useState('');
   const [proposeDescription, setProposeDescription] = useState('');
@@ -421,7 +426,7 @@ export const PaymentsPage: React.FC = () => {
     try {
       const response = await api.get('/payments/history');
       setTransactions(response.data);
-      
+
       // Update balance to reflect the latest on the server
       const meResponse = await api.get('/auth/me');
       setBalance(meResponse.data.walletBalance);
@@ -504,17 +509,17 @@ export const PaymentsPage: React.FC = () => {
     ctx.beginPath();
     ctx.arc(300, 85, 25, 0, Math.PI * 2);
     ctx.fill();
-    
+
     // Letter inside logo mark
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 24px Inter, sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText('N', 300, 93);
-    
+
     ctx.fillStyle = brandText;
     ctx.font = 'bold 24px Inter, sans-serif';
     ctx.fillText('NEXUS', 300, 150);
-    
+
     ctx.fillStyle = taglineText;
     ctx.font = '12px Inter, sans-serif';
     ctx.fillText('SECURE PAYMENTS & ESCROW', 300, 172);
@@ -537,7 +542,7 @@ export const PaymentsPage: React.FC = () => {
     ctx.beginPath();
     ctx.arc(300, 250, 30, 0, Math.PI * 2);
     ctx.fill();
-    
+
     // draw white check mark
     ctx.strokeStyle = '#ffffff';
     ctx.lineWidth = 4;
@@ -612,14 +617,14 @@ export const PaymentsPage: React.FC = () => {
     try {
       const amountInUSD = parseFloat(amount) / exchangeRate;
       const idempotencyKey = 'wth_' + Math.random().toString(36).substring(2, 11) + Date.now();
-      const response = await api.post('/payments/withdraw', { 
+      const response = await api.post('/payments/withdraw', {
         amount: amountInUSD,
         iban,
-        idempotencyKey 
+        idempotencyKey
       });
       setBalance(response.data.balance);
       toast.success(`Withdrawal request for ${formatLocalCurrency(parseFloat(amount))} submitted successfully! Status: Pending Admin Approval.`);
-      
+
       const tx = response.data.transaction;
       setReceiptData({
         id: tx?.id || tx?._id || 'wth_' + Math.random().toString(36).substring(2, 6),
@@ -655,9 +660,9 @@ export const PaymentsPage: React.FC = () => {
       const idempotencyKey = 'txf_' + Math.random().toString(36).substring(2, 11) + Date.now();
       const sendEscrow = user?.role === 'investor' ? isEscrow : false;
       const sendAgreement = user?.role === 'investor' ? agreementAccepted : true;
-      
-      const response = await api.post('/payments/transfer', { 
-        recipientId, 
+
+      const response = await api.post('/payments/transfer', {
+        recipientId,
         amount: amountInUSD,
         isEscrow: sendEscrow,
         agreementAccepted: sendAgreement,
@@ -665,17 +670,17 @@ export const PaymentsPage: React.FC = () => {
         idempotencyKey
       });
       setBalance(response.data.balance);
-      
+
       if (sendEscrow) {
         toast.success(`Escrow initialized: held ${formatLocalCurrency(parseFloat(amount))} until milestone release.`);
       } else {
         toast.success(`Successfully transferred ${formatLocalCurrency(parseFloat(amount))}!`);
       }
-      
+
       const tx = response.data.transaction;
       const partner = partners.find(p => p.id === recipientId);
-      const recipientName = partner 
-        ? (partner.startupName ? `${partner.name} (${partner.startupName})` : partner.name) 
+      const recipientName = partner
+        ? (partner.startupName ? `${partner.name} (${partner.startupName})` : partner.name)
         : 'Investment Partner';
 
       setReceiptData({
@@ -792,11 +797,10 @@ export const PaymentsPage: React.FC = () => {
         {user.role === 'admin' && (
           <button
             onClick={() => setIsAdminView(!isAdminView)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-semibold transition-all shadow-sm ${
-              isAdminView 
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-semibold transition-all shadow-sm ${isAdminView
                 ? 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100 dark:bg-red-950/30 dark:text-red-400 dark:border-red-900/50'
                 : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50 dark:bg-gray-905 dark:text-gray-350 dark:border-gray-800 dark:hover:bg-gray-800'
-            }`}
+              }`}
           >
             <span>🔧</span>
             {isAdminView ? 'Switch to User View' : 'Developer Admin Portal'}
@@ -878,438 +882,431 @@ export const PaymentsPage: React.FC = () => {
         </Card>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* Sleek Credit Card / Wallet Dashboard */}
-        <div className="lg:col-span-1 space-y-6">
-          <div className="bg-gradient-to-br from-indigo-700 via-purple-700 to-pink-700 rounded-2xl p-6 text-white shadow-2xl relative overflow-hidden h-52 flex flex-col justify-between">
-            {/* Background elements */}
-            <div className="absolute right-0 top-0 w-32 h-32 bg-white/10 rounded-full blur-2xl" />
-            <div className="absolute left-10 bottom-0 w-24 h-24 bg-purple-500/30 rounded-full blur-xl" />
 
-            <div className="flex justify-between items-center z-10">
-              <span className="text-sm font-semibold tracking-wider opacity-90">NEXUS WALLET</span>
-              <CreditCard size={28} className="opacity-95" />
-            </div>
+          {/* Sleek Credit Card / Wallet Dashboard */}
+          <div className="lg:col-span-1 space-y-6">
+            <div className="bg-gradient-to-br from-indigo-700 via-purple-700 to-pink-700 rounded-2xl p-6 text-white shadow-2xl relative overflow-hidden h-52 flex flex-col justify-between">
+              {/* Background elements */}
+              <div className="absolute right-0 top-0 w-32 h-32 bg-white/10 rounded-full blur-2xl" />
+              <div className="absolute left-10 bottom-0 w-24 h-24 bg-purple-500/30 rounded-full blur-xl" />
 
-            <div className="my-2 z-10">
-              <span className="text-xs uppercase opacity-75 font-semibold">Available Balance</span>
-              <h2 className="text-3xl font-bold tracking-tight mt-1">
-                {formatLocalCurrency(balance)}
-              </h2>
-            </div>
-
-            <div className="flex justify-between items-center mt-4 z-10 text-xs">
-              <div>
-                <p className="opacity-75 font-semibold">CARD HOLDER</p>
-                <p className="font-bold tracking-wider mt-0.5">{user.name.toUpperCase()}</p>
+              <div className="flex justify-between items-center z-10">
+                <span className="text-sm font-semibold tracking-wider opacity-90">NEXUS WALLET</span>
+                <CreditCard size={28} className="opacity-95" />
               </div>
-              <div className="text-right">
-                <p className="opacity-75 font-semibold">ROLE</p>
-                <p className="font-bold tracking-wider mt-0.5 uppercase">{user.role}</p>
+
+              <div className="my-2 z-10">
+                <span className="text-xs uppercase opacity-75 font-semibold">Available Balance</span>
+                <h2 className="text-3xl font-bold tracking-tight mt-1">
+                  {formatLocalCurrency(balance)}
+                </h2>
+              </div>
+
+              <div className="flex justify-between items-center mt-4 z-10 text-xs">
+                <div>
+                  <p className="opacity-75 font-semibold">CARD HOLDER</p>
+                  <p className="font-bold tracking-wider mt-0.5">{user.name.toUpperCase()}</p>
+                </div>
+                <div className="text-right">
+                  <p className="opacity-75 font-semibold">ROLE</p>
+                  <p className="font-bold tracking-wider mt-0.5 uppercase">{user.role}</p>
+                </div>
               </div>
             </div>
+
+            {/* Quick Actions Panel */}
+            <Card>
+              <CardBody className="grid grid-cols-3 gap-2">
+                <button
+                  onClick={() => {
+                    setAmount('');
+                    setActiveModal('deposit');
+                  }}
+                  className="flex flex-col items-center justify-center py-4 bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-lg hover:bg-primary-100 dark:hover:bg-primary-900/50 transition-colors"
+                >
+                  <ArrowDownLeft size={20} className="mb-1" />
+                  <span className="text-xs font-semibold">Deposit</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setAmount('');
+                    setActiveModal('withdraw');
+                  }}
+                  className="flex flex-col items-center justify-center py-4 bg-error-50 dark:bg-error-900/30 text-error-700 dark:text-error-300 rounded-lg hover:bg-error-100 dark:hover:bg-error-900/50 transition-colors"
+                >
+                  <ArrowUpRight size={20} className="mb-1" />
+                  <span className="text-xs font-semibold">Withdraw</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setAmount('');
+                    setRecipientId('');
+                    setIsEscrow(false);
+                    setAgreementAccepted(false);
+                    setMilestoneTitle('');
+                    setActiveModal('transfer');
+                  }}
+                  className="flex flex-col items-center justify-center py-4 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
+                >
+                  <Send size={20} className="mb-1" />
+                  <span className="text-xs font-semibold">Transfer</span>
+                </button>
+              </CardBody>
+            </Card>
           </div>
 
-          {/* Quick Actions Panel */}
-          <Card>
-            <CardBody className="grid grid-cols-3 gap-2">
-              <button 
-                onClick={() => {
-                  setAmount('');
-                  setActiveModal('deposit');
-                }}
-                className="flex flex-col items-center justify-center py-4 bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-lg hover:bg-primary-100 dark:hover:bg-primary-900/50 transition-colors"
-              >
-                <ArrowDownLeft size={20} className="mb-1" />
-                <span className="text-xs font-semibold">Deposit</span>
-              </button>
-              
-              <button 
-                onClick={() => {
-                  setAmount('');
-                  setActiveModal('withdraw');
-                }}
-                className="flex flex-col items-center justify-center py-4 bg-error-50 dark:bg-error-900/30 text-error-700 dark:text-error-300 rounded-lg hover:bg-error-100 dark:hover:bg-error-900/50 transition-colors"
-              >
-                <ArrowUpRight size={20} className="mb-1" />
-                <span className="text-xs font-semibold">Withdraw</span>
-              </button>
-              
-              <button 
-                onClick={() => {
-                  setAmount('');
-                  setRecipientId('');
-                  setIsEscrow(false);
-                  setAgreementAccepted(false);
-                  setMilestoneTitle('');
-                  setActiveModal('transfer');
-                }}
-                className="flex flex-col items-center justify-center py-4 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
-              >
-                <Send size={20} className="mb-1" />
-                <span className="text-xs font-semibold">Transfer</span>
-              </button>
-            </CardBody>
-          </Card>
-        </div>
+          {/* Dashboard Tabs & Content Area */}
+          <div className="lg:col-span-2 space-y-6">
+            <Card className="h-full flex flex-col">
+              <CardHeader className="flex flex-row justify-between items-center border-b border-gray-100 dark:border-gray-700/60 p-4">
+                <div className="flex gap-4">
+                  <button
+                    onClick={() => setActiveTab('history')}
+                    className={`flex items-center gap-2 pb-2 text-sm font-semibold border-b-2 transition-all ${activeTab === 'history'
+                        ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
+                        : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                      }`}
+                  >
+                    <History size={16} />
+                    Transaction History
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('milestones')}
+                    className={`flex items-center gap-2 pb-2 text-sm font-semibold border-b-2 transition-all ${activeTab === 'milestones'
+                        ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
+                        : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                      }`}
+                  >
+                    <Layers size={16} />
+                    Escrow Milestones
+                  </button>
+                </div>
 
-        {/* Dashboard Tabs & Content Area */}
-        <div className="lg:col-span-2 space-y-6">
-          <Card className="h-full flex flex-col">
-            <CardHeader className="flex flex-row justify-between items-center border-b border-gray-100 dark:border-gray-700/60 p-4">
-              <div className="flex gap-4">
-                <button
-                  onClick={() => setActiveTab('history')}
-                  className={`flex items-center gap-2 pb-2 text-sm font-semibold border-b-2 transition-all ${
-                    activeTab === 'history' 
-                      ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400' 
-                      : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-                  }`}
-                >
-                  <History size={16} />
-                  Transaction History
-                </button>
-                <button
-                  onClick={() => setActiveTab('milestones')}
-                  className={`flex items-center gap-2 pb-2 text-sm font-semibold border-b-2 transition-all ${
-                    activeTab === 'milestones' 
-                      ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400' 
-                      : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-                  }`}
-                >
-                  <Layers size={16} />
-                  Escrow Milestones
-                </button>
-              </div>
+                {activeTab === 'milestones' && user.role === 'entrepreneur' && (
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      setProposeTitle('');
+                      setProposeDescription('');
+                      setProposeAmount('');
+                      setProposeDeadline('');
+                      setActiveModal('propose');
+                    }}
+                    leftIcon={<Plus size={14} />}
+                  >
+                    Propose Milestone
+                  </Button>
+                )}
+              </CardHeader>
+              <CardBody className="p-0 flex-1">
 
-              {activeTab === 'milestones' && user.role === 'entrepreneur' && (
-                <Button 
-                  size="sm" 
-                  onClick={() => {
-                    setProposeTitle('');
-                    setProposeDescription('');
-                    setProposeAmount('');
-                    setProposeDeadline('');
-                    setActiveModal('propose');
-                  }}
-                  leftIcon={<Plus size={14} />}
-                >
-                  Propose Milestone
-                </Button>
-              )}
-            </CardHeader>
-            <CardBody className="p-0 flex-1">
-              
-              {/* TAB 1: Transaction History */}
-              {activeTab === 'history' && (
-                isLoading ? (
-                  <p className="text-center py-8 text-gray-500">Loading transactions...</p>
-                ) : transactions.length > 0 ? (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-sm">
-                      <thead className="bg-gray-50 dark:bg-gray-800/50 text-gray-700 dark:text-gray-300 uppercase text-xs tracking-wider border-b border-gray-200 dark:border-gray-700">
-                        <tr>
-                          <th className="px-6 py-3">Date</th>
-                          <th className="px-6 py-3">Details</th>
-                          <th className="px-6 py-3">Type</th>
-                          <th className="px-6 py-3">Amount</th>
-                          <th className="px-6 py-3">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                        {transactions.map(tx => {
-                          const isIncome = (tx.type === 'deposit') || 
-                                           (tx.type === 'transfer' && tx.recipientId?.id === user.id) ||
-                                           (tx.type === 'escrow_release' && tx.recipientId?.id === user.id);
-                          
-                          const isIncomingEscrow = (tx.type === 'escrow' && tx.recipientId?.id === user.id);
-                          const isPendingWithdraw = (tx.type === 'withdraw' && tx.status === 'pending');
-                          
-                          // Compute description
-                          let description = '';
-                          if (tx.type === 'deposit') {
-                            description = 'Funds Deposit (Stripe)';
-                          } else if (tx.type === 'withdraw') {
-                            description = 'Bank Account Withdrawal';
-                          } else if (tx.type === 'transfer') {
-                            if (tx.userId.id === user.id) {
-                              description = `Investment to ${tx.recipientId?.startupName || tx.recipientId?.name}`;
-                            } else {
-                              description = `Investment received from ${tx.userId.name}`;
+                {/* TAB 1: Transaction History */}
+                {activeTab === 'history' && (
+                  isLoading ? (
+                    <p className="text-center py-8 text-gray-500">Loading transactions...</p>
+                  ) : transactions.length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-sm">
+                        <thead className="bg-gray-50 dark:bg-gray-800/50 text-gray-700 dark:text-gray-300 uppercase text-xs tracking-wider border-b border-gray-200 dark:border-gray-700">
+                          <tr>
+                            <th className="px-6 py-3">Date</th>
+                            <th className="px-6 py-3">Details</th>
+                            <th className="px-6 py-3">Type</th>
+                            <th className="px-6 py-3">Amount</th>
+                            <th className="px-6 py-3">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                          {transactions.map(tx => {
+                            const isIncome = (tx.type === 'deposit') ||
+                              (tx.type === 'transfer' && tx.recipientId?.id === user.id) ||
+                              (tx.type === 'escrow_release' && tx.recipientId?.id === user.id);
+
+                            const isIncomingEscrow = (tx.type === 'escrow' && tx.recipientId?.id === user.id);
+                            const isPendingWithdraw = (tx.type === 'withdraw' && tx.status === 'pending');
+
+                            // Compute description
+                            let description = '';
+                            if (tx.type === 'deposit') {
+                              description = 'Funds Deposit (Stripe)';
+                            } else if (tx.type === 'withdraw') {
+                              description = 'Bank Account Withdrawal';
+                            } else if (tx.type === 'transfer') {
+                              if (tx.userId.id === user.id) {
+                                description = `Investment to ${tx.recipientId?.startupName || tx.recipientId?.name}`;
+                              } else {
+                                description = `Investment received from ${tx.userId.name}`;
+                              }
+                            } else if (tx.type === 'escrow') {
+                              if (tx.userId.id === user.id) {
+                                description = `Escrow Hold for ${tx.recipientId?.startupName || tx.recipientId?.name}`;
+                              } else {
+                                description = `Escrow Hold received from ${tx.userId.name}`;
+                              }
+                            } else if (tx.type === 'escrow_release') {
+                              if (tx.userId.id === user.id) {
+                                description = `Escrow Released to ${tx.recipientId?.startupName || tx.recipientId?.name}`;
+                              } else {
+                                description = `Escrow Released by ${tx.userId.name}`;
+                              }
                             }
-                          } else if (tx.type === 'escrow') {
-                            if (tx.userId.id === user.id) {
-                              description = `Escrow Hold for ${tx.recipientId?.startupName || tx.recipientId?.name}`;
-                            } else {
-                              description = `Escrow Hold received from ${tx.userId.name}`;
+
+                            // If milestone reference is present, append milestone title
+                            if (tx.milestoneId?.title) {
+                              description += ` (${tx.milestoneId.title})`;
                             }
-                          } else if (tx.type === 'escrow_release') {
-                            if (tx.userId.id === user.id) {
-                              description = `Escrow Released to ${tx.recipientId?.startupName || tx.recipientId?.name}`;
-                            } else {
-                              description = `Escrow Released by ${tx.userId.name}`;
-                            }
-                          }
 
-                          // If milestone reference is present, append milestone title
-                          if (tx.milestoneId?.title) {
-                            description += ` (${tx.milestoneId.title})`;
-                          }
+                            return (
+                              <tr key={tx.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                                <td className="px-6 py-4 whitespace-nowrap text-gray-500 dark:text-gray-400">
+                                  {formatLocalDate(new Date(tx.createdAt))}
+                                </td>
+                                <td className="px-6 py-4 font-medium text-gray-900 dark:text-gray-100">
+                                  {description}
+                                </td>
+                                <td className="px-6 py-4 capitalize text-gray-500 dark:text-gray-400">
+                                  {tx.type.replace('_', ' ')}
+                                </td>
+                                <td className={`px-6 py-4 font-semibold ${isIncomingEscrow
+                                    ? 'text-indigo-600 dark:text-indigo-400'
+                                    : isPendingWithdraw
+                                      ? 'text-amber-600 dark:text-amber-500'
+                                      : isIncome
+                                        ? 'text-success-600'
+                                        : 'text-error-600'
+                                  }`}>
+                                  {isIncomingEscrow
+                                    ? '• '
+                                    : isPendingWithdraw
+                                      ? '• '
+                                      : isIncome
+                                        ? '+'
+                                        : '-'
+                                  }
+                                  {formatLocalCurrency(tx.amount)}
+                                  {isIncomingEscrow && <span className="text-[10px] block font-normal text-indigo-500 dark:text-indigo-400">(Held in Escrow)</span>}
+                                  {isPendingWithdraw && <span className="text-[10px] block font-normal text-amber-500">(Pending Review)</span>}
+                                </td>
+                                <td className="px-6 py-4">
+                                  <span className={`px-2 py-1 text-xs font-semibold rounded-full uppercase tracking-wide ${tx.status === 'completed'
+                                      ? 'bg-success-50 text-success-700 dark:bg-success-900/20 dark:text-success-300'
+                                      : tx.status === 'held'
+                                        ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-300'
+                                        : tx.status === 'pending'
+                                          ? 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300'
+                                          : 'bg-error-50 text-error-700 dark:bg-error-900/20 dark:text-error-300'
+                                    }`}>
+                                    {tx.status === 'pending' ? 'pending approval' : tx.status}
+                                  </span>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="text-center py-12 text-gray-500">
+                      <CircleDollarSign size={40} className="mx-auto text-gray-400 mb-2" />
+                      <p>No transactions found in this wallet.</p>
+                    </div>
+                  )
+                )}
 
-                          return (
-                            <tr key={tx.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                              <td className="px-6 py-4 whitespace-nowrap text-gray-500 dark:text-gray-400">
-                                {formatLocalDate(new Date(tx.createdAt))}
-                              </td>
-                              <td className="px-6 py-4 font-medium text-gray-900 dark:text-gray-100">
-                                {description}
-                              </td>
-                              <td className="px-6 py-4 capitalize text-gray-500 dark:text-gray-400">
-                                {tx.type.replace('_', ' ')}
-                              </td>
-                              <td className={`px-6 py-4 font-semibold ${
-                                isIncomingEscrow
-                                  ? 'text-indigo-600 dark:text-indigo-400' 
-                                  : isPendingWithdraw
-                                  ? 'text-amber-600 dark:text-amber-500'
-                                  : isIncome 
-                                  ? 'text-success-600' 
-                                  : 'text-error-600'
-                              }`}>
-                                {isIncomingEscrow 
-                                  ? '• ' 
-                                  : isPendingWithdraw 
-                                  ? '• ' 
-                                  : isIncome 
-                                  ? '+' 
-                                  : '-'
-                                }
-                                {formatLocalCurrency(tx.amount)}
-                                {isIncomingEscrow && <span className="text-[10px] block font-normal text-indigo-500 dark:text-indigo-400">(Held in Escrow)</span>}
-                                {isPendingWithdraw && <span className="text-[10px] block font-normal text-amber-500">(Pending Review)</span>}
-                              </td>
-                              <td className="px-6 py-4">
-                                <span className={`px-2 py-1 text-xs font-semibold rounded-full uppercase tracking-wide ${
-                                  tx.status === 'completed' 
-                                    ? 'bg-success-50 text-success-700 dark:bg-success-900/20 dark:text-success-300' 
-                                    : tx.status === 'held'
-                                    ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-300'
-                                    : tx.status === 'pending'
-                                    ? 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300'
-                                    : 'bg-error-50 text-error-700 dark:bg-error-900/20 dark:text-error-300'
-                                }`}>
-                                  {tx.status === 'pending' ? 'pending approval' : tx.status}
-                                </span>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : (
-                  <div className="text-center py-12 text-gray-500">
-                    <CircleDollarSign size={40} className="mx-auto text-gray-400 mb-2" />
-                    <p>No transactions found in this wallet.</p>
-                  </div>
-                )
-              )}
+                {/* TAB 2: Escrow Milestones */}
+                {activeTab === 'milestones' && (
+                  <div className="p-4 space-y-6">
 
-              {/* TAB 2: Escrow Milestones */}
-              {activeTab === 'milestones' && (
-                <div className="p-4 space-y-6">
-                  
-                  {/* FOR INVESTOR: Explore/Fund Partner Milestones */}
-                  {user.role === 'investor' && (
-                    <div className="bg-gray-50 dark:bg-gray-800/40 p-4 rounded-xl border border-gray-100 dark:border-gray-700/60 mb-4">
-                      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-                        <div>
-                          <h4 className="text-sm font-semibold text-gray-900 dark:text-white">Explore Startup Roadmaps</h4>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">View proposed milestones from connected startups and fund them directly.</p>
+                    {/* FOR INVESTOR: Explore/Fund Partner Milestones */}
+                    {user.role === 'investor' && (
+                      <div className="bg-gray-50 dark:bg-gray-800/40 p-4 rounded-xl border border-gray-100 dark:border-gray-700/60 mb-4">
+                        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+                          <div>
+                            <h4 className="text-sm font-semibold text-gray-900 dark:text-white">Explore Startup Roadmaps</h4>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">View proposed milestones from connected startups and fund them directly.</p>
+                          </div>
+                          <select
+                            className="border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 rounded-lg px-3 py-1.5 text-sm focus:ring-primary-500 focus:border-primary-500 max-w-xs w-full"
+                            value={exploreStartupId}
+                            onChange={(e) => setExploreStartupId(e.target.value)}
+                          >
+                            <option value="">-- Choose Connection --</option>
+                            {partners.map(p => (
+                              <option key={p.id} value={p.id}>
+                                {p.startupName || p.name}
+                              </option>
+                            ))}
+                          </select>
                         </div>
-                        <select
-                          className="border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 rounded-lg px-3 py-1.5 text-sm focus:ring-primary-500 focus:border-primary-500 max-w-xs w-full"
-                          value={exploreStartupId}
-                          onChange={(e) => setExploreStartupId(e.target.value)}
-                        >
-                          <option value="">-- Choose Connection --</option>
-                          {partners.map(p => (
-                            <option key={p.id} value={p.id}>
-                              {p.startupName || p.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
 
-                      {exploreStartupId && (
-                        <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                          {exploreMilestones.length > 0 ? (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                              {exploreMilestones.filter(m => m.status === 'pending').map(m => (
-                                <div key={m.id} className="bg-white dark:bg-gray-900 p-4 rounded-lg border border-gray-100 dark:border-gray-800 flex flex-col justify-between shadow-sm">
-                                  <div>
-                                    <div className="flex justify-between items-start gap-2">
-                                      <h5 className="font-semibold text-sm text-gray-900 dark:text-white">{m.title}</h5>
-                                      <span className="px-2 py-0.5 text-xs font-semibold rounded bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 shrink-0">
-                                        Proposed
+                        {exploreStartupId && (
+                          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                            {exploreMilestones.length > 0 ? (
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                {exploreMilestones.filter(m => m.status === 'pending').map(m => (
+                                  <div key={m.id} className="bg-white dark:bg-gray-900 p-4 rounded-lg border border-gray-100 dark:border-gray-800 flex flex-col justify-between shadow-sm">
+                                    <div>
+                                      <div className="flex justify-between items-start gap-2">
+                                        <h5 className="font-semibold text-sm text-gray-900 dark:text-white">{m.title}</h5>
+                                        <span className="px-2 py-0.5 text-xs font-semibold rounded bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 shrink-0">
+                                          Proposed
+                                        </span>
+                                      </div>
+                                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">{m.description || 'No description provided.'}</p>
+                                      <div className="mt-3 flex items-center justify-between text-xs font-medium">
+                                        <span className="text-gray-500">Target:</span>
+                                        <span className="text-gray-900 dark:text-white font-bold">{formatLocalCurrency(m.targetAmount)}</span>
+                                      </div>
+                                      {m.deadline && (
+                                        <div className="mt-1 flex items-center justify-between text-xs text-gray-500">
+                                          <span>Deadline:</span>
+                                          <span>{formatLocalDate(new Date(m.deadline))}</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                    <Button
+                                      size="sm"
+                                      className="mt-4"
+                                      onClick={() => {
+                                        setSelectedMilestone(m);
+                                        setAgreementAccepted(false);
+                                        setActiveModal('fund');
+                                      }}
+                                    >
+                                      Fund via Escrow
+                                    </Button>
+                                  </div>
+                                ))}
+                                {exploreMilestones.filter(m => m.status === 'pending').length === 0 && (
+                                  <p className="text-center py-4 text-xs text-gray-500 col-span-2">No proposed roadmaps waiting for funding for this startup.</p>
+                                )}
+                              </div>
+                            ) : (
+                              <p className="text-center py-4 text-xs text-gray-500">No milestones registered for this startup.</p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* ACTIVE MILESTONES TIMELINE */}
+                    <div>
+                      <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">
+                        {user.role === 'investor' ? 'Your Funded Escrow Agreements' : 'Startup Roadmap & Milestones'}
+                      </h4>
+
+                      {milestones.length > 0 ? (
+                        <div className="space-y-4">
+                          {milestones.map(m => {
+                            const isPendingProposed = m.status === 'pending';
+                            const isInProgress = m.status === 'in_progress';
+                            const isCompleted = m.status === 'completed';
+                            const isReleased = m.status === 'released';
+
+                            return (
+                              <div
+                                key={m.id}
+                                className={`p-4 rounded-xl border transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white dark:bg-gray-900 shadow-sm ${isReleased
+                                    ? 'border-gray-100 dark:border-gray-800 opacity-80'
+                                    : isCompleted
+                                      ? 'border-green-200 dark:border-green-900/30 bg-green-50/5 dark:bg-green-950/5'
+                                      : 'border-indigo-100 dark:border-indigo-950/50'
+                                  }`}
+                              >
+                                <div className="flex gap-3 items-start">
+                                  <div className={`p-2 rounded-lg mt-0.5 shrink-0 ${isReleased
+                                      ? 'bg-gray-100 text-gray-500 dark:bg-gray-800'
+                                      : isCompleted
+                                        ? 'bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-400 animate-pulse'
+                                        : 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-400'
+                                    }`}>
+                                    {isReleased ? <Unlock size={18} /> : <Lock size={18} />}
+                                  </div>
+
+                                  <div className="space-y-1">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <h5 className="font-semibold text-sm text-gray-900 dark:text-white leading-tight">{m.title}</h5>
+
+                                      <span className={`px-2 py-0.5 text-xs font-semibold rounded uppercase tracking-wider ${isReleased
+                                          ? 'bg-gray-150 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
+                                          : isCompleted
+                                            ? 'bg-success-50 text-success-700 dark:bg-success-900/20 dark:text-success-300'
+                                            : isInProgress
+                                              ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-300'
+                                              : 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300'
+                                        }`}>
+                                        {m.status.replace('_', ' ')}
                                       </span>
                                     </div>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">{m.description || 'No description provided.'}</p>
-                                    <div className="mt-3 flex items-center justify-between text-xs font-medium">
-                                      <span className="text-gray-500">Target:</span>
-                                      <span className="text-gray-900 dark:text-white font-bold">{formatLocalCurrency(m.targetAmount)}</span>
+
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">{m.description}</p>
+
+                                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-400 font-medium pt-1">
+                                      {user.role === 'investor' ? (
+                                        <span>Startup: <span className="text-gray-600 dark:text-gray-300">{m.startupId?.startupName || m.startupId?.name}</span></span>
+                                      ) : (
+                                        <span>Funder: <span className="text-gray-600 dark:text-gray-300">{m.investorId?.name || 'Unfunded Roadmap'}</span></span>
+                                      )}
+
+                                      {m.deadline && (
+                                        <span className="flex items-center gap-1">
+                                          <Calendar size={12} />
+                                          Due {formatLocalDate(new Date(m.deadline))}
+                                        </span>
+                                      )}
                                     </div>
-                                    {m.deadline && (
-                                      <div className="mt-1 flex items-center justify-between text-xs text-gray-500">
-                                        <span>Deadline:</span>
-                                        <span>{formatLocalDate(new Date(m.deadline))}</span>
-                                      </div>
-                                    )}
                                   </div>
-                                  <Button
-                                    size="sm"
-                                    className="mt-4"
-                                    onClick={() => {
-                                      setSelectedMilestone(m);
-                                      setAgreementAccepted(false);
-                                      setActiveModal('fund');
-                                    }}
-                                  >
-                                    Fund via Escrow
-                                  </Button>
                                 </div>
-                              ))}
-                              {exploreMilestones.filter(m => m.status === 'pending').length === 0 && (
-                                <p className="text-center py-4 text-xs text-gray-500 col-span-2">No proposed roadmaps waiting for funding for this startup.</p>
-                              )}
-                            </div>
-                          ) : (
-                            <p className="text-center py-4 text-xs text-gray-500">No milestones registered for this startup.</p>
-                          )}
+
+                                <div className="flex flex-col items-end gap-2 self-stretch sm:self-center justify-between shrink-0">
+                                  <div className="text-right">
+                                    <span className="text-xs text-gray-500 block">Funds Escrowed</span>
+                                    <span className="font-bold text-sm text-gray-900 dark:text-white">
+                                      {formatLocalCurrency(m.targetAmount)}
+                                    </span>
+                                  </div>
+
+                                  {/* ACTIONS BASED ON ROLE AND STATUS */}
+                                  {user.role === 'entrepreneur' && (isPendingProposed || isInProgress) && (
+                                    <Button
+                                      size="sm"
+                                      onClick={() => triggerMarkComplete(m.id)}
+                                    >
+                                      Mark as Complete
+                                    </Button>
+                                  )}
+
+                                  {user.role === 'investor' && isCompleted && (
+                                    <Button
+                                      size="sm"
+                                      onClick={() => triggerReleaseEscrow(m.id, m.title, m.targetAmount)}
+                                      className="bg-green-600 hover:bg-green-700 text-white"
+                                    >
+                                      Approve & Release
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="text-center py-12 text-gray-500">
+                          <Layers size={36} className="mx-auto text-gray-400 mb-2" />
+                          <p>No escrow milestones registered.</p>
                         </div>
                       )}
                     </div>
-                  )}
 
-                  {/* ACTIVE MILESTONES TIMELINE */}
-                  <div>
-                    <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">
-                      {user.role === 'investor' ? 'Your Funded Escrow Agreements' : 'Startup Roadmap & Milestones'}
-                    </h4>
-
-                    {milestones.length > 0 ? (
-                      <div className="space-y-4">
-                        {milestones.map(m => {
-                          const isPendingProposed = m.status === 'pending';
-                          const isInProgress = m.status === 'in_progress';
-                          const isCompleted = m.status === 'completed';
-                          const isReleased = m.status === 'released';
-
-                          return (
-                            <div 
-                              key={m.id} 
-                              className={`p-4 rounded-xl border transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white dark:bg-gray-900 shadow-sm ${
-                                isReleased 
-                                  ? 'border-gray-100 dark:border-gray-800 opacity-80' 
-                                  : isCompleted 
-                                  ? 'border-green-200 dark:border-green-900/30 bg-green-50/5 dark:bg-green-950/5'
-                                  : 'border-indigo-100 dark:border-indigo-950/50'
-                              }`}
-                            >
-                              <div className="flex gap-3 items-start">
-                                <div className={`p-2 rounded-lg mt-0.5 shrink-0 ${
-                                  isReleased 
-                                    ? 'bg-gray-100 text-gray-500 dark:bg-gray-800' 
-                                    : isCompleted
-                                    ? 'bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-400 animate-pulse'
-                                    : 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-400'
-                                }`}>
-                                  {isReleased ? <Unlock size={18} /> : <Lock size={18} />}
-                                </div>
-
-                                <div className="space-y-1">
-                                  <div className="flex flex-wrap items-center gap-2">
-                                    <h5 className="font-semibold text-sm text-gray-900 dark:text-white leading-tight">{m.title}</h5>
-                                    
-                                    <span className={`px-2 py-0.5 text-xs font-semibold rounded uppercase tracking-wider ${
-                                      isReleased
-                                        ? 'bg-gray-150 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
-                                        : isCompleted
-                                        ? 'bg-success-50 text-success-700 dark:bg-success-900/20 dark:text-success-300'
-                                        : isInProgress
-                                        ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-300'
-                                        : 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300'
-                                    }`}>
-                                      {m.status.replace('_', ' ')}
-                                    </span>
-                                  </div>
-                                  
-                                  <p className="text-xs text-gray-500 dark:text-gray-400">{m.description}</p>
-                                  
-                                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-400 font-medium pt-1">
-                                    {user.role === 'investor' ? (
-                                      <span>Startup: <span className="text-gray-600 dark:text-gray-300">{m.startupId?.startupName || m.startupId?.name}</span></span>
-                                    ) : (
-                                      <span>Funder: <span className="text-gray-600 dark:text-gray-300">{m.investorId?.name || 'Unfunded Roadmap'}</span></span>
-                                    )}
-                                    
-                                    {m.deadline && (
-                                      <span className="flex items-center gap-1">
-                                        <Calendar size={12} />
-                                        Due {formatLocalDate(new Date(m.deadline))}
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-
-                              <div className="flex flex-col items-end gap-2 self-stretch sm:self-center justify-between shrink-0">
-                                <div className="text-right">
-                                  <span className="text-xs text-gray-500 block">Funds Escrowed</span>
-                                  <span className="font-bold text-sm text-gray-900 dark:text-white">
-                                    {formatLocalCurrency(m.targetAmount)}
-                                  </span>
-                                </div>
-
-                                {/* ACTIONS BASED ON ROLE AND STATUS */}
-                                {user.role === 'entrepreneur' && (isPendingProposed || isInProgress) && (
-                                  <Button
-                                    size="sm"
-                                    onClick={() => triggerMarkComplete(m.id)}
-                                  >
-                                    Mark as Complete
-                                  </Button>
-                                )}
-
-                                {user.role === 'investor' && isCompleted && (
-                                  <Button
-                                    size="sm"
-                                    onClick={() => triggerReleaseEscrow(m.id, m.title, m.targetAmount)}
-                                    className="bg-green-600 hover:bg-green-700 text-white"
-                                  >
-                                    Approve & Release
-                                  </Button>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <div className="text-center py-12 text-gray-500">
-                        <Layers size={36} className="mx-auto text-gray-400 mb-2" />
-                        <p>No escrow milestones registered.</p>
-                      </div>
-                    )}
                   </div>
+                )}
 
-                </div>
-              )}
-
-            </CardBody>
-          </Card>
+              </CardBody>
+            </Card>
+          </div>
         </div>
-      </div>
       )}
 
       {/* MODALS */}
@@ -1379,7 +1376,7 @@ export const PaymentsPage: React.FC = () => {
                   required
                   fullWidth
                 />
-                
+
                 <Input
                   label="Bank Account Routing/IBAN"
                   placeholder="US12345678901234"
@@ -1552,9 +1549,9 @@ export const PaymentsPage: React.FC = () => {
                   <Button variant="outline" type="button" fullWidth onClick={() => setActiveModal('none')}>
                     Cancel
                   </Button>
-                  <Button 
-                    type="submit" 
-                    fullWidth 
+                  <Button
+                    type="submit"
+                    fullWidth
                     isLoading={isSubmitting}
                     disabled={user.role === 'investor' && !agreementAccepted}
                   >
@@ -1651,7 +1648,7 @@ export const PaymentsPage: React.FC = () => {
                 <div className="bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/40 p-4 rounded-xl space-y-2">
                   <h4 className="font-bold text-sm text-indigo-800 dark:text-indigo-300">{selectedMilestone.title}</h4>
                   <p className="text-xs text-gray-600 dark:text-gray-400">{selectedMilestone.description}</p>
-                  
+
                   <div className="flex justify-between text-xs font-semibold pt-2 border-t border-indigo-100/50 dark:border-indigo-900/20">
                     <span className="text-gray-500">Escrow Amount:</span>
                     <span className="text-indigo-800 dark:text-indigo-300 font-bold">{formatLocalCurrency(selectedMilestone.targetAmount)}</span>
@@ -1680,9 +1677,9 @@ export const PaymentsPage: React.FC = () => {
                   }}>
                     Cancel
                   </Button>
-                  <Button 
-                    type="submit" 
-                    fullWidth 
+                  <Button
+                    type="submit"
+                    fullWidth
                     isLoading={isSubmitting}
                     disabled={!agreementAccepted}
                   >
@@ -1699,14 +1696,14 @@ export const PaymentsPage: React.FC = () => {
         <div className="fixed inset-0 bg-gray-950/70 backdrop-blur-md z-50 flex items-center justify-center p-4">
           <Card className="w-full max-w-md shadow-2xl border border-gray-100 dark:border-none bg-gradient-to-br from-white to-gray-50 dark:from-indigo-950 dark:to-slate-900 text-gray-900 dark:text-white relative overflow-hidden">
             <div className="absolute top-0 right-0 p-4">
-              <button 
-                onClick={() => setShowReceipt(false)} 
+              <button
+                onClick={() => setShowReceipt(false)}
                 className="text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors"
               >
                 <X size={20} />
               </button>
             </div>
-            
+
             <CardBody className="p-8 text-center flex flex-col items-center">
               {/* Branding */}
               <div className="mb-4">
@@ -1727,9 +1724,9 @@ export const PaymentsPage: React.FC = () => {
                   <CheckCircle size={32} className="animate-bounce" />
                 </div>
               )}
-              
-              <span className={receiptData.status === 'pending' 
-                ? "text-amber-600 dark:text-amber-400 text-xs font-semibold tracking-wider uppercase mb-1" 
+
+              <span className={receiptData.status === 'pending'
+                ? "text-amber-600 dark:text-amber-400 text-xs font-semibold tracking-wider uppercase mb-1"
                 : "text-emerald-600 dark:text-emerald-400 text-xs font-semibold tracking-wider uppercase mb-1"
               }>
                 {receiptData.status === 'pending' ? 'Withdrawal Pending Approval' : 'Transaction Successful'}
@@ -1763,16 +1760,16 @@ export const PaymentsPage: React.FC = () => {
               </div>
 
               <div className="w-full flex gap-3">
-                <Button 
-                  variant="outline" 
-                  fullWidth 
+                <Button
+                  variant="outline"
+                  fullWidth
                   onClick={() => setShowReceipt(false)}
                   className="border-gray-300 dark:border-white/10 text-gray-700 dark:text-white hover:bg-gray-50 dark:hover:bg-white/5"
                 >
                   Close
                 </Button>
-                <Button 
-                  fullWidth 
+                <Button
+                  fullWidth
                   onClick={downloadReceiptImage}
                   className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-600/30"
                 >
@@ -1792,28 +1789,28 @@ export const PaymentsPage: React.FC = () => {
               <div className="mx-auto w-12 h-12 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-650 dark:text-indigo-400 rounded-full flex items-center justify-center mb-4">
                 <ShieldCheck size={26} />
               </div>
-              
+
               <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
                 {confirmModal.type === 'complete' ? 'Confirm Completion' : 'Approve & Release Funds'}
               </h3>
-              
+
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-                {confirmModal.type === 'complete' 
+                {confirmModal.type === 'complete'
                   ? 'Are you sure you want to mark this milestone as completed? This will notify the investor to release the locked funds.'
                   : `Are you sure you want to approve and release ${formatLocalCurrency(confirmModal.amount || 0)} for the milestone "${confirmModal.title}"? This action is irreversible.`}
               </p>
-              
+
               <div className="flex gap-3">
-                <Button 
-                  variant="outline" 
-                  fullWidth 
+                <Button
+                  variant="outline"
+                  fullWidth
                   onClick={() => setConfirmModal({ isOpen: false, type: 'none', milestoneId: '' })}
                   disabled={isSubmitting}
                 >
                   Cancel
                 </Button>
-                <Button 
-                  fullWidth 
+                <Button
+                  fullWidth
                   onClick={async () => {
                     setIsSubmitting(true);
                     try {

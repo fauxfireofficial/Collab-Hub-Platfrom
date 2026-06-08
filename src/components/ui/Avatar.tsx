@@ -25,14 +25,14 @@ export const Avatar: React.FC<AvatarProps> = ({
     xl: 'h-16 w-16',
     xxl: 'h-32 w-32 md:h-40 md:w-40',
   };
-  
+
   const statusColors = {
     online: 'bg-success-500',
     offline: 'bg-gray-400',
     away: 'bg-warning-500',
     busy: 'bg-error-500',
   };
-  
+
   const statusSizes = {
     xs: 'h-1.5 w-1.5',
     sm: 'h-2 w-2',
@@ -41,16 +41,16 @@ export const Avatar: React.FC<AvatarProps> = ({
     xl: 'h-4 w-4',
     xxl: 'h-6 w-6',
   };
-  
+
   const getAvatarSrc = (url?: string) => {
     if (!url) return '';
     if (url.startsWith('/uploads')) {
-      const backendUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace('/api', '');
+      const backendUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace('/api', '');
       return `${backendUrl}${url}`;
     }
     return url;
   };
-  
+
   return (
     <div className={`relative inline-block rounded-full ${className}`}>
       <img
@@ -64,9 +64,9 @@ export const Avatar: React.FC<AvatarProps> = ({
           target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(alt)}&background=random`;
         }}
       />
-      
+
       {status && (
-        <span 
+        <span
           className={`absolute bottom-0 right-0 block rounded-full ring-2 ring-white ${statusColors[status]} ${statusSizes[size]}`}
         />
       )}

@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  Send, Video, Info, ArrowLeft, Paperclip, FileSpreadsheet, 
-  Scale, Image as ImageIcon, FileText, X, Loader2, Mic, Trash2, 
+import {
+  Send, Video, Info, ArrowLeft, Paperclip, FileSpreadsheet,
+  Scale, Image as ImageIcon, FileText, X, Loader2, Mic, Trash2,
   Play, Pause, CheckCircle, CircleDollarSign, Layers, Lock, ShieldCheck, Briefcase, Calendar, Bot,
   History, Archive, AlertCircle
 } from 'lucide-react';
@@ -21,7 +21,7 @@ import { io, Socket } from 'socket.io-client';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 
-const SIGNALING_URL = import.meta.env.VITE_API_BASE || 'http://localhost:5000';
+const SIGNALING_URL = import.meta.env.VITE_API_BASE || import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 export const ChatPage: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();
@@ -62,7 +62,7 @@ export const ChatPage: React.FC = () => {
     date: string;
     status: string;
   } | null>(null);
-  
+
   // Call/Socket States
   const [socket, setSocket] = useState<Socket | null>(null);
 
@@ -75,7 +75,7 @@ export const ChatPage: React.FC = () => {
   const [meetingEndTime, setMeetingEndTime] = useState('');
   const [isBooking, setIsBooking] = useState(false);
   const [partnerMeeting, setPartnerMeeting] = useState<any | null>(null);
-  
+
   // Voice Recording States
   const [isRecording, setIsRecording] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -142,17 +142,17 @@ export const ChatPage: React.FC = () => {
     ctx.beginPath();
     ctx.arc(300, 85, 25, 0, Math.PI * 2);
     ctx.fill();
-    
+
     // Letter inside logo mark
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 24px Inter, sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText('N', 300, 93);
-    
+
     ctx.fillStyle = brandText;
     ctx.font = 'bold 24px Inter, sans-serif';
     ctx.fillText('NEXUS', 300, 150);
-    
+
     ctx.fillStyle = taglineText;
     ctx.font = '12px Inter, sans-serif';
     ctx.fillText('SECURE PAYMENTS & ESCROW', 300, 172);
@@ -175,7 +175,7 @@ export const ChatPage: React.FC = () => {
     ctx.beginPath();
     ctx.arc(300, 250, 30, 0, Math.PI * 2);
     ctx.fill();
-    
+
     // draw white check mark
     ctx.strokeStyle = '#ffffff';
     ctx.lineWidth = 4;
@@ -247,7 +247,7 @@ export const ChatPage: React.FC = () => {
   const handleDirectPayment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!chatPartner || !currentUser) return;
-    
+
     if (currentUser.role === 'investor' && !agreementAccepted) {
       toast.error('You must accept the Terms of Investment.');
       return;
@@ -260,28 +260,28 @@ export const ChatPage: React.FC = () => {
         toast.error('Please enter a valid amount.');
         return;
       }
-      
+
       const idempotencyKey = 'chat_' + Math.random().toString(36).substring(2, 11) + Date.now();
       const sendEscrow = currentUser.role === 'investor' ? isEscrow : false;
       const sendAgreement = currentUser.role === 'investor' ? agreementAccepted : true;
-      
-      const response = await api.post('/payments/transfer', { 
-        recipientId: chatPartner.id || chatPartner._id, 
+
+      const response = await api.post('/payments/transfer', {
+        recipientId: chatPartner.id || chatPartner._id,
         amount: amountInUSD,
         isEscrow: sendEscrow,
         agreementAccepted: sendAgreement,
         milestoneTitle: sendEscrow ? milestoneTitle || undefined : undefined,
         idempotencyKey
       });
-      
+
       if (sendEscrow) {
         toast.success(`Escrow initialized: held $${amountInUSD.toLocaleString()} until milestone release.`);
       } else {
         toast.success(`Successfully transferred $${amountInUSD.toLocaleString()}!`);
       }
-      
+
       const tx = response.data.transaction;
-      
+
       setReceiptData({
         id: tx?.id || tx?._id || 'txf_' + Math.random().toString(36).substring(2, 6),
         type: tx?.type || (sendEscrow ? 'escrow' : 'transfer'),
@@ -339,7 +339,7 @@ export const ChatPage: React.FC = () => {
   const triggerFileInput = (type: 'pdf' | 'excel' | 'legal' | 'image') => {
     setActiveUploadType(type);
     setShowAttachmentMenu(false);
-    
+
     if (fileInputRef.current) {
       if (type === 'pdf') {
         fileInputRef.current.accept = '.pdf,.ppt,.pptx';
@@ -377,16 +377,16 @@ export const ChatPage: React.FC = () => {
     try {
       const formData = new FormData();
       formData.append('document', file);
-      
+
       const uploadRes = await api.post('/documents/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      
+
       const docData = uploadRes.data;
 
       // Determine actual file type (could be video even if uploadType is 'image')
       const actualFileType = file.type.startsWith('video/') ? 'video' : uploadType;
-      
+
       const attachmentPayload: any = {
         attachment: true,
         fileType: actualFileType,
@@ -398,12 +398,12 @@ export const ChatPage: React.FC = () => {
       if (caption.trim()) {
         attachmentPayload.caption = caption.trim();
       }
-      
+
       const sendRes = await api.post('/chat/send', {
         receiverId: userId,
         content: JSON.stringify(attachmentPayload)
       });
-      
+
       const sentMsg = {
         id: sendRes.data._id || sendRes.data.id,
         senderId: sendRes.data.senderId,
@@ -566,7 +566,7 @@ export const ChatPage: React.FC = () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, []);
-  
+
   // Load active conversations list
   const fetchConversations = async () => {
     try {
@@ -582,8 +582,8 @@ export const ChatPage: React.FC = () => {
     try {
       const res = await api.get('/meetings');
       // Find an active meeting (pending or accepted) with this chat partner
-      const activeMeeting = res.data.find((m: any) => 
-        (m.organizer?.id === userId || m.organizer?._id === userId || m.invitee?.id === userId || m.invitee?._id === userId) && 
+      const activeMeeting = res.data.find((m: any) =>
+        (m.organizer?.id === userId || m.organizer?._id === userId || m.invitee?.id === userId || m.invitee?._id === userId) &&
         (m.status === 'pending' || m.status === 'accepted')
       );
       setPartnerMeeting(activeMeeting || null);
@@ -609,10 +609,11 @@ export const ChatPage: React.FC = () => {
       };
     }
   }, [currentUser, userId]);
-  
+
   // Load message history with selected user and poll
   useEffect(() => {
     const fetchMessages = async () => {
+      if (!currentUser) return;
       if (userId) {
         try {
           const res = await api.get(`/chat/history/${userId}`);
@@ -666,7 +667,7 @@ export const ChatPage: React.FC = () => {
       setMessages([]);
     }
   }, [currentUser, userId]);
-  
+
   // Smart auto-scroll: only scroll to bottom if user is already near the bottom
   useEffect(() => {
     if (isAtBottomRef.current) {
@@ -682,18 +683,18 @@ export const ChatPage: React.FC = () => {
     const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
     isAtBottomRef.current = distanceFromBottom <= threshold;
   };
-  
+
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!newMessage.trim() || !currentUser || !userId) return;
-    
+
     try {
       const res = await api.post('/chat/send', {
         receiverId: userId,
         content: newMessage
       });
-      
+
       const sentMsg = {
         id: res.data._id || res.data.id,
         senderId: res.data.senderId,
@@ -717,13 +718,13 @@ export const ChatPage: React.FC = () => {
   const handleSendBotOption = async (option: string) => {
     const text = `I need help with: ${option}`;
     if (!currentUser || !userId) return;
-    
+
     try {
       const res = await api.post('/chat/send', {
         receiverId: userId,
         content: text
       });
-      
+
       const sentMsg = {
         id: res.data._id || res.data.id,
         senderId: res.data.senderId,
@@ -757,13 +758,13 @@ export const ChatPage: React.FC = () => {
     try {
       await api.post('/users/support/end', { userId: chatPartner?.id || chatPartner?._id });
       setIsSupportActive(false);
-      
+
       // Admin sends an automated closing message
       await api.post('/chat/send', {
         receiverId: chatPartner?.id || chatPartner?._id,
         content: "Admin has closed this support session. If you need further assistance, please start a new chat."
       });
-      
+
       toast.success('Support session ended and archived');
       // Update local messages array to clear it out since it's archived
       setMessages([]);
@@ -806,7 +807,7 @@ export const ChatPage: React.FC = () => {
       console.error('Error deleting message:', err);
     }
   };
-  
+
   // Meeting Booking Handler
   const handleBookMeeting = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -850,7 +851,7 @@ export const ChatPage: React.FC = () => {
   };
 
   if (!currentUser) return null;
-  
+
   return (
     <>
 
@@ -964,7 +965,7 @@ export const ChatPage: React.FC = () => {
         <div className={`w-full md:w-1/3 lg:w-1/4 border-r border-gray-200 dark:border-gray-800 ${userId ? 'hidden md:block' : 'block'}`}>
           <ChatUserList conversations={conversations} />
         </div>
-        
+
         {/* Main chat area */}
         <div className={`flex-1 flex flex-col ${!userId ? 'hidden md:flex' : 'flex'}`}>
           {/* Chat header */}
@@ -972,7 +973,7 @@ export const ChatPage: React.FC = () => {
             <>
               <div className="border-b border-gray-200 dark:border-gray-800 p-4 flex justify-between items-center bg-white dark:bg-gray-900 shadow-sm">
                 <div className="flex items-center">
-                  <button 
+                  <button
                     onClick={() => navigate('/chat')}
                     className="mr-3 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 md:hidden"
                     aria-label="Back to messages"
@@ -986,7 +987,7 @@ export const ChatPage: React.FC = () => {
                     status={chatPartner.isOnline ? 'online' : 'offline'}
                     className="mr-3"
                   />
-                  
+
                   <div>
                     <h2 className="text-lg font-medium text-gray-900 dark:text-white">{chatPartner.name}</h2>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -994,11 +995,11 @@ export const ChatPage: React.FC = () => {
                     </p>
                   </div>
                 </div>
-                
+
                 <div className="flex space-x-2 items-center">
                   {currentUser.role === 'admin' && isSupportActive && (
                     <Button
-                      variant="destructive"
+                      variant="error"
                       size="sm"
                       className="rounded-full px-3 py-1 font-bold bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-950/30 dark:text-red-400 dark:hover:bg-red-900/40 border border-red-200 dark:border-red-900/50 shadow-sm transition-colors"
                       onClick={handleEndSupport}
@@ -1018,7 +1019,7 @@ export const ChatPage: React.FC = () => {
                   </Button>
                 </div>
               </div>
-              
+
               {/* Messages container */}
               <div
                 ref={messagesContainerRef}
@@ -1060,7 +1061,7 @@ export const ChatPage: React.FC = () => {
                                   "Report a Bug",
                                   "Other"
                                 ].map((option) => (
-                                  <button 
+                                  <button
                                     key={option}
                                     type="button"
                                     onClick={() => handleSendBotOption(option)}
@@ -1087,7 +1088,7 @@ export const ChatPage: React.FC = () => {
                   </div>
                 )}
               </div>
-              
+
               {/* Message input */}
               {currentUser.role !== 'admin' && chatPartner?.role === 'admin' && !isSupportActive ? (
                 <div className="border-t border-gray-200 dark:border-gray-800 p-8 bg-white dark:bg-gray-900 flex flex-col justify-center items-center">
@@ -1103,184 +1104,184 @@ export const ChatPage: React.FC = () => {
                   </Button>
                 </div>
               ) : (
-              <div className="border-t border-gray-200 dark:border-gray-800 p-4 bg-white dark:bg-gray-900 relative">
-                {/* Hidden file input */}
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleFileChange}
-                  className="hidden"
-                />
+                <div className="border-t border-gray-200 dark:border-gray-800 p-4 bg-white dark:bg-gray-900 relative">
+                  {/* Hidden file input */}
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileChange}
+                    className="hidden"
+                  />
 
-                <form onSubmit={handleSendMessage} className="flex space-x-2 items-center w-full">
-                  {isRecording ? (
-                    <div className="flex-1 flex items-center justify-between bg-red-50 border border-red-200 rounded-full px-5 py-2 shadow-inner transition-all duration-300">
-                      <div className="flex items-center space-x-3">
-                        {isPaused ? (
-                          <div className="flex items-center space-x-2">
-                            <span className="h-3 w-3 rounded-full bg-gray-400"></span>
-                            <span className="text-sm font-semibold text-gray-500">
-                              {t('Recording Paused')}
-                            </span>
-                          </div>
-                        ) : (
-                          <div className="flex items-center space-x-2">
-                            <span className="relative flex h-3 w-3">
-                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                              <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-                            </span>
-                            <span className="text-sm font-semibold text-red-600 animate-pulse">
-                              {t('Recording Voice Note...')}
-                            </span>
-                          </div>
-                        )}
-                        <span className="text-sm font-bold text-gray-700 bg-white px-2 py-0.5 rounded border border-gray-150 shadow-sm font-mono">
-                          {formatTime(recordingTime)}
-                        </span>
-                      </div>
-                      
-                      <div className="flex items-center space-x-3">
-                        {/* Pause / Resume Button */}
-                        {isPaused ? (
-                          <button
-                            type="button"
-                            onClick={resumeRecording}
-                            className="rounded-full flex items-center justify-center h-[36px] w-[36px] bg-white hover:bg-primary-50 text-primary-600 border border-gray-200 shadow-sm transition-all focus:outline-none"
-                            title="Resume Recording"
-                          >
-                            <Play size={18} className="fill-current text-primary-600 ml-0.5" />
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={pauseRecording}
-                            className="rounded-full flex items-center justify-center h-[36px] w-[36px] bg-white hover:bg-gray-100 text-gray-600 border border-gray-200 shadow-sm transition-all focus:outline-none"
-                            title="Pause Recording"
-                          >
-                            <Pause size={18} className="text-gray-600" />
-                          </button>
-                        )}
-
-                        {/* Discard Button */}
-                        <button
-                          type="button"
-                          onClick={() => stopRecording(false)}
-                          className="rounded-full flex items-center justify-center h-[36px] w-[36px] bg-white hover:bg-red-50 text-gray-500 hover:text-red-600 border border-gray-200 shadow-sm transition-all focus:outline-none"
-                          title="Discard Recording"
-                        >
-                          <Trash2 size={18} className="transition-colors" />
-                        </button>
-                        
-                        {/* Send Button */}
-                        <button
-                          type="button"
-                          onClick={() => stopRecording(true)}
-                          className="rounded-full flex items-center justify-center h-[36px] w-[36px] bg-primary-600 hover:bg-primary-700 text-white shadow-md transition-all focus:outline-none"
-                          title="Send Voice Note"
-                        >
-                          <Send size={16} className="text-white ml-0.5" />
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="relative" ref={attachmentMenuRef}>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className={`rounded-full p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 dark:hover:text-gray-300 ${showAttachmentMenu ? 'bg-gray-100 dark:bg-gray-800 text-primary-600 dark:text-primary-400' : ''}`}
-                          onClick={() => setShowAttachmentMenu(!showAttachmentMenu)}
-                          aria-label="Attach file"
-                        >
-                          <Paperclip size={20} className={showAttachmentMenu ? 'text-primary-600 rotate-45 transition-transform duration-200' : 'transition-transform duration-200'} />
-                        </Button>
-
-                        {/* Dropdown Menu */}
-                        {showAttachmentMenu && (
-                          <div className="absolute bottom-full left-0 mb-3 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 py-2 w-64 z-50 origin-bottom-left transition-all">
-                            <div className="px-4 py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                              {t('Send Attachment')}
+                  <form onSubmit={handleSendMessage} className="flex space-x-2 items-center w-full">
+                    {isRecording ? (
+                      <div className="flex-1 flex items-center justify-between bg-red-50 border border-red-200 rounded-full px-5 py-2 shadow-inner transition-all duration-300">
+                        <div className="flex items-center space-x-3">
+                          {isPaused ? (
+                            <div className="flex items-center space-x-2">
+                              <span className="h-3 w-3 rounded-full bg-gray-400"></span>
+                              <span className="text-sm font-semibold text-gray-500">
+                                {t('Recording Paused')}
+                              </span>
                             </div>
-                            
-                            <button
-                              type="button"
-                              onClick={() => triggerFileInput('pdf')}
-                              className="w-full flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors"
-                            >
-                              <span className="p-2 bg-red-50 text-red-600 rounded-lg mr-3 flex items-center justify-center">
-                                <FileText size={16} />
+                          ) : (
+                            <div className="flex items-center space-x-2">
+                              <span className="relative flex h-3 w-3">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
                               </span>
-                              {t('Pitch Deck (PDF/PPT)')}
-                            </button>
+                              <span className="text-sm font-semibold text-red-600 animate-pulse">
+                                {t('Recording Voice Note...')}
+                              </span>
+                            </div>
+                          )}
+                          <span className="text-sm font-bold text-gray-700 bg-white px-2 py-0.5 rounded border border-gray-150 shadow-sm font-mono">
+                            {formatTime(recordingTime)}
+                          </span>
+                        </div>
 
+                        <div className="flex items-center space-x-3">
+                          {/* Pause / Resume Button */}
+                          {isPaused ? (
                             <button
                               type="button"
-                              onClick={() => triggerFileInput('excel')}
-                              className="w-full flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-green-50 hover:text-green-600 transition-colors"
+                              onClick={resumeRecording}
+                              className="rounded-full flex items-center justify-center h-[36px] w-[36px] bg-white hover:bg-primary-50 text-primary-600 border border-gray-200 shadow-sm transition-all focus:outline-none"
+                              title="Resume Recording"
                             >
-                              <span className="p-2 bg-green-50 text-green-600 rounded-lg mr-3 flex items-center justify-center">
-                                <FileSpreadsheet size={16} />
-                              </span>
-                              {t('Financial Model (Excel)')}
+                              <Play size={18} className="fill-current text-primary-600 ml-0.5" />
                             </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={pauseRecording}
+                              className="rounded-full flex items-center justify-center h-[36px] w-[36px] bg-white hover:bg-gray-100 text-gray-600 border border-gray-200 shadow-sm transition-all focus:outline-none"
+                              title="Pause Recording"
+                            >
+                              <Pause size={18} className="text-gray-600" />
+                            </button>
+                          )}
 
-                            <button
-                              type="button"
-                              onClick={() => triggerFileInput('legal')}
-                              className="w-full flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
-                            >
-                              <span className="p-2 bg-blue-50 text-blue-600 rounded-lg mr-3 flex items-center justify-center">
-                                <Scale size={16} />
-                              </span>
-                              {t('Legal / NDA (DOC/PDF)')}
-                            </button>
+                          {/* Discard Button */}
+                          <button
+                            type="button"
+                            onClick={() => stopRecording(false)}
+                            className="rounded-full flex items-center justify-center h-[36px] w-[36px] bg-white hover:bg-red-50 text-gray-500 hover:text-red-600 border border-gray-200 shadow-sm transition-all focus:outline-none"
+                            title="Discard Recording"
+                          >
+                            <Trash2 size={18} className="transition-colors" />
+                          </button>
 
-                            <button
-                              type="button"
-                              onClick={() => triggerFileInput('image')}
-                              className="w-full flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-600 transition-colors"
-                            >
-                              <span className="p-2 bg-purple-50 text-purple-600 rounded-lg mr-3 flex items-center justify-center">
-                                <ImageIcon size={16} />
-                              </span>
-                              {t('Product Image / Video')}
-                            </button>
-                          </div>
-                        )}
+                          {/* Send Button */}
+                          <button
+                            type="button"
+                            onClick={() => stopRecording(true)}
+                            className="rounded-full flex items-center justify-center h-[36px] w-[36px] bg-primary-600 hover:bg-primary-700 text-white shadow-md transition-all focus:outline-none"
+                            title="Send Voice Note"
+                          >
+                            <Send size={16} className="text-white ml-0.5" />
+                          </button>
+                        </div>
                       </div>
-                      
-                      <Input
-                        type="text"
-                        placeholder={t('Type a message...')}
-                        value={newMessage}
-                        onChange={(e) => setNewMessage(e.target.value)}
-                        fullWidth
-                        className="flex-1"
-                      />
-                      
-                      {newMessage.trim() ? (
-                        <button
-                          type="submit"
-                          className="rounded-full w-[44px] h-[44px] flex items-center justify-center bg-primary-600 hover:bg-primary-700 text-white transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500/60 flex-shrink-0 shadow-md"
-                          aria-label="Send message"
-                        >
-                          <Send size={20} className="text-white ml-0.5" />
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={startRecording}
-                          className="rounded-full w-[44px] h-[44px] flex items-center justify-center bg-gray-50 hover:bg-primary-50 text-gray-500 hover:text-primary-600 border border-gray-300 hover:border-primary-300 transition-all focus:outline-none focus:ring-2 focus:ring-primary-500/60 flex-shrink-0 shadow-sm"
-                          aria-label="Record voice note"
-                        >
-                          <Mic size={24} className="text-primary-600" />
-                        </button>
-                      )}
-                    </>
-                  )}
-                </form>
-              </div>
+                    ) : (
+                      <>
+                        <div className="relative" ref={attachmentMenuRef}>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className={`rounded-full p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 dark:hover:text-gray-300 ${showAttachmentMenu ? 'bg-gray-100 dark:bg-gray-800 text-primary-600 dark:text-primary-400' : ''}`}
+                            onClick={() => setShowAttachmentMenu(!showAttachmentMenu)}
+                            aria-label="Attach file"
+                          >
+                            <Paperclip size={20} className={showAttachmentMenu ? 'text-primary-600 rotate-45 transition-transform duration-200' : 'transition-transform duration-200'} />
+                          </Button>
+
+                          {/* Dropdown Menu */}
+                          {showAttachmentMenu && (
+                            <div className="absolute bottom-full left-0 mb-3 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 py-2 w-64 z-50 origin-bottom-left transition-all">
+                              <div className="px-4 py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                                {t('Send Attachment')}
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={() => triggerFileInput('pdf')}
+                                className="w-full flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors"
+                              >
+                                <span className="p-2 bg-red-50 text-red-600 rounded-lg mr-3 flex items-center justify-center">
+                                  <FileText size={16} />
+                                </span>
+                                {t('Pitch Deck (PDF/PPT)')}
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => triggerFileInput('excel')}
+                                className="w-full flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-green-50 hover:text-green-600 transition-colors"
+                              >
+                                <span className="p-2 bg-green-50 text-green-600 rounded-lg mr-3 flex items-center justify-center">
+                                  <FileSpreadsheet size={16} />
+                                </span>
+                                {t('Financial Model (Excel)')}
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => triggerFileInput('legal')}
+                                className="w-full flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                              >
+                                <span className="p-2 bg-blue-50 text-blue-600 rounded-lg mr-3 flex items-center justify-center">
+                                  <Scale size={16} />
+                                </span>
+                                {t('Legal / NDA (DOC/PDF)')}
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => triggerFileInput('image')}
+                                className="w-full flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-600 transition-colors"
+                              >
+                                <span className="p-2 bg-purple-50 text-purple-600 rounded-lg mr-3 flex items-center justify-center">
+                                  <ImageIcon size={16} />
+                                </span>
+                                {t('Product Image / Video')}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        <Input
+                          type="text"
+                          placeholder={t('Type a message...')}
+                          value={newMessage}
+                          onChange={(e) => setNewMessage(e.target.value)}
+                          fullWidth
+                          className="flex-1"
+                        />
+
+                        {newMessage.trim() ? (
+                          <button
+                            type="submit"
+                            className="rounded-full w-[44px] h-[44px] flex items-center justify-center bg-primary-600 hover:bg-primary-700 text-white transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500/60 flex-shrink-0 shadow-md"
+                            aria-label="Send message"
+                          >
+                            <Send size={20} className="text-white ml-0.5" />
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={startRecording}
+                            className="rounded-full w-[44px] h-[44px] flex items-center justify-center bg-gray-50 hover:bg-primary-50 text-gray-500 hover:text-primary-600 border border-gray-300 hover:border-primary-300 transition-all focus:outline-none focus:ring-2 focus:ring-primary-500/60 flex-shrink-0 shadow-sm"
+                            aria-label="Record voice note"
+                          >
+                            <Mic size={24} className="text-primary-600" />
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </form>
+                </div>
               )}
             </>
           ) : (
@@ -1296,304 +1297,311 @@ export const ChatPage: React.FC = () => {
           )}
         </div>
 
-        {/* Info panel */}
+        {/* Info panel — mobile: full-screen overlay, desktop: side panel */}
         {showInfoPanel && chatPartner && (
-          <div className="w-80 border-l border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 flex flex-col h-full overflow-hidden shrink-0 animate-fade-in">
-            {/* Header */}
-            <div className="p-4 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center bg-gray-50/50 dark:bg-gray-900/50">
-              <h3 className="font-semibold text-gray-900 dark:text-white text-xs uppercase tracking-wider">{t('Contact Information')}</h3>
-              <button 
-                onClick={() => setShowInfoPanel(false)} 
-                className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
-              >
-                <X size={18} />
-              </button>
-            </div>
-            
-            {/* Content (Scrollable) */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
-              {/* Profile Header Card */}
-              <div className="text-center pb-6 border-b border-gray-100 dark:border-gray-800">
-                <div className="flex justify-center mb-3">
-                  <Avatar 
-                    src={chatPartner.avatarUrl || ''} 
-                    alt={chatPartner.name} 
-                    size="xl" 
-                    className="shadow-md ring-2 ring-indigo-100 dark:ring-indigo-900/50" 
-                  />
-                </div>
-                <h4 className="font-semibold text-lg text-gray-900 dark:text-white leading-snug">{chatPartner.name}</h4>
-                <div className="mt-1 flex items-center justify-center gap-1.5">
-                  <span className={`w-2 h-2 rounded-full ${chatPartner.isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400'}`}></span>
-                  <span className="text-xs text-gray-500 dark:text-gray-400 capitalize">{chatPartner.role}</span>
-                </div>
-
-                {/* Send Payment Button */}
-                <Button 
-                  fullWidth 
-                  onClick={() => setShowPaymentModal(true)}
-                  className="mt-5 bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center gap-2 py-2 shadow-md shadow-indigo-600/10 rounded-lg text-sm font-medium"
+          <React.Fragment>
+            {/* Mobile backdrop */}
+            <div
+              className="fixed inset-0 bg-black/40 z-40 md:hidden"
+              onClick={() => setShowInfoPanel(false)}
+            />
+            <div className="fixed inset-y-0 right-0 w-full max-w-sm z-50 md:static md:w-80 md:z-auto border-l border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 flex flex-col h-full overflow-hidden shrink-0 animate-fade-in shadow-2xl md:shadow-none">
+              {/* Header */}
+              <div className="p-4 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center bg-gray-50/50 dark:bg-gray-900/50">
+                <h3 className="font-semibold text-gray-900 dark:text-white text-xs uppercase tracking-wider">{t('Contact Information')}</h3>
+                <button
+                  onClick={() => setShowInfoPanel(false)}
+                  className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
                 >
-                  <CircleDollarSign size={16} />
-                  {t('Send Payment')}
-                </Button>
+                  <X size={18} />
+                </button>
               </div>
 
-              {/* Bio Section */}
-              <div className="space-y-2">
-                <h5 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('About')}</h5>
-                <p className="text-sm text-gray-650 dark:text-gray-300 leading-relaxed bg-gray-50/50 dark:bg-gray-950/40 p-3 rounded-lg border border-gray-100 dark:border-gray-800">
-                  {chatPartner.bio || t('No bio provided.')}
-                </p>
-              </div>
+              {/* Content (Scrollable) */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                {/* Profile Header Card */}
+                <div className="text-center pb-6 border-b border-gray-100 dark:border-gray-800">
+                  <div className="flex justify-center mb-3">
+                    <Avatar
+                      src={chatPartner.avatarUrl || ''}
+                      alt={chatPartner.name}
+                      size="xl"
+                      className="shadow-md ring-2 ring-indigo-100 dark:ring-indigo-900/50"
+                    />
+                  </div>
+                  <h4 className="font-semibold text-lg text-gray-900 dark:text-white leading-snug">{chatPartner.name}</h4>
+                  <div className="mt-1 flex items-center justify-center gap-1.5">
+                    <span className={`w-2 h-2 rounded-full ${chatPartner.isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400'}`}></span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400 capitalize">{chatPartner.role}</span>
+                  </div>
 
-              {/* Role-Specific details */}
-              {chatPartner.role === 'entrepreneur' ? (
-                <div className="space-y-4">
-                  <h5 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('Startup Details')}</h5>
-                  
-                  {chatPartner.startupName && (
-                    <div className="flex gap-3 items-start">
-                      <Briefcase size={16} className="text-indigo-500 shrink-0 mt-0.5" />
-                      <div>
-                        <div className="text-xs text-gray-400">{t('Company Name')}</div>
-                        <div className="text-sm font-semibold text-gray-800 dark:text-gray-250">{chatPartner.startupName}</div>
-                      </div>
-                    </div>
-                  )}
-
-                  {chatPartner.industry && (
-                    <div className="flex gap-3 items-start">
-                      <Layers size={16} className="text-indigo-500 shrink-0 mt-0.5" />
-                      <div>
-                        <div className="text-xs text-gray-400">{t('Industry')}</div>
-                        <div className="text-sm text-gray-800 dark:text-gray-250">{chatPartner.industry}</div>
-                      </div>
-                    </div>
-                  )}
-
-                  {chatPartner.fundingNeeded && (
-                    <div className="flex gap-3 items-start bg-indigo-50/30 dark:bg-indigo-950/10 border border-indigo-100/50 dark:border-indigo-900/30 p-3 rounded-lg">
-                      <CircleDollarSign size={16} className="text-indigo-650 dark:text-indigo-400 shrink-0 mt-0.5" />
-                      <div>
-                        <div className="text-xs text-indigo-600 dark:text-indigo-400 font-semibold">{t('Funding Needed')}</div>
-                        <div className="text-sm font-extrabold text-indigo-900 dark:text-white">${parseFloat(chatPartner.fundingNeeded).toLocaleString()}</div>
-                      </div>
-                    </div>
-                  )}
-
-                  {chatPartner.pitchSummary && (
-                    <div className="space-y-1">
-                      <div className="text-xs text-gray-400 font-medium">{t('Pitch Summary')}</div>
-                      <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed italic bg-gray-50/20 p-2.5 rounded border border-gray-100 dark:border-gray-800">
-                        "{chatPartner.pitchSummary}"
-                      </p>
-                    </div>
-                  )}
+                  {/* Send Payment Button */}
+                  <Button
+                    fullWidth
+                    onClick={() => setShowPaymentModal(true)}
+                    className="mt-5 bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center gap-2 py-2 shadow-md shadow-indigo-600/10 rounded-lg text-sm font-medium"
+                  >
+                    <CircleDollarSign size={16} />
+                    {t('Send Payment')}
+                  </Button>
                 </div>
-              ) : (
-                // Investor Details
-                <div className="space-y-4">
-                  <h5 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('Investment Profile')}</h5>
-                  
-                  {(chatPartner.minimumInvestment || chatPartner.maximumInvestment) && (
-                    <div className="flex gap-3 items-start bg-indigo-50/30 dark:bg-indigo-950/10 border border-indigo-100/50 dark:border-indigo-900/30 p-3 rounded-lg">
-                      <CircleDollarSign size={16} className="text-indigo-650 dark:text-indigo-400 shrink-0 mt-0.5" />
-                      <div>
-                        <div className="text-xs text-indigo-600 dark:text-indigo-400 font-semibold">{t('Investment Range')}</div>
-                        <div className="text-sm font-extrabold text-indigo-900 dark:text-white">
-                          ${parseFloat(chatPartner.minimumInvestment || '0').toLocaleString()} - ${parseFloat(chatPartner.maximumInvestment || '0').toLocaleString()}
+
+                {/* Bio Section */}
+                <div className="space-y-2">
+                  <h5 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('About')}</h5>
+                  <p className="text-sm text-gray-650 dark:text-gray-300 leading-relaxed bg-gray-50/50 dark:bg-gray-950/40 p-3 rounded-lg border border-gray-100 dark:border-gray-800">
+                    {chatPartner.bio || t('No bio provided.')}
+                  </p>
+                </div>
+
+                {/* Role-Specific details */}
+                {chatPartner.role === 'entrepreneur' ? (
+                  <div className="space-y-4">
+                    <h5 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('Startup Details')}</h5>
+
+                    {chatPartner.startupName && (
+                      <div className="flex gap-3 items-start">
+                        <Briefcase size={16} className="text-indigo-500 shrink-0 mt-0.5" />
+                        <div>
+                          <div className="text-xs text-gray-400">{t('Company Name')}</div>
+                          <div className="text-sm font-semibold text-gray-800 dark:text-gray-250">{chatPartner.startupName}</div>
                         </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
-                  {chatPartner.investmentStage && chatPartner.investmentStage.length > 0 && (
-                    <div className="space-y-1">
-                      <div className="text-xs text-gray-400">{t('Preferred Stages')}</div>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {chatPartner.investmentStage.map((s: string) => (
-                          <span key={s} className="px-2 py-0.5 bg-gray-100 dark:bg-gray-805 text-gray-600 dark:text-gray-300 rounded text-[10px] uppercase font-semibold">
-                            {s}
-                          </span>
-                        ))}
+                    {chatPartner.industry && (
+                      <div className="flex gap-3 items-start">
+                        <Layers size={16} className="text-indigo-500 shrink-0 mt-0.5" />
+                        <div>
+                          <div className="text-xs text-gray-400">{t('Industry')}</div>
+                          <div className="text-sm text-gray-800 dark:text-gray-250">{chatPartner.industry}</div>
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
-                  {chatPartner.investmentInterests && chatPartner.investmentInterests.length > 0 && (
-                    <div className="space-y-1">
-                      <div className="text-xs text-gray-400">{t('Interests')}</div>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {chatPartner.investmentInterests.map((interest: string) => (
-                          <span key={interest} className="px-2 py-0.5 bg-indigo-55/60 dark:bg-indigo-950/30 text-indigo-650 dark:text-indigo-400 rounded text-[10px] font-semibold">
-                            {interest}
-                          </span>
-                        ))}
+                    {chatPartner.fundingNeeded && (
+                      <div className="flex gap-3 items-start bg-indigo-50/30 dark:bg-indigo-950/10 border border-indigo-100/50 dark:border-indigo-900/30 p-3 rounded-lg">
+                        <CircleDollarSign size={16} className="text-indigo-650 dark:text-indigo-400 shrink-0 mt-0.5" />
+                        <div>
+                          <div className="text-xs text-indigo-600 dark:text-indigo-400 font-semibold">{t('Funding Needed')}</div>
+                          <div className="text-sm font-extrabold text-indigo-900 dark:text-white">${parseFloat(chatPartner.fundingNeeded).toLocaleString()}</div>
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </div>
-              )}
+                    )}
 
-              {/* Support Tools for Admin */}
-              {currentUser?.role === 'admin' && (
+                    {chatPartner.pitchSummary && (
+                      <div className="space-y-1">
+                        <div className="text-xs text-gray-400 font-medium">{t('Pitch Summary')}</div>
+                        <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed italic bg-gray-50/20 p-2.5 rounded border border-gray-100 dark:border-gray-800">
+                          "{chatPartner.pitchSummary}"
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  // Investor Details
+                  <div className="space-y-4">
+                    <h5 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('Investment Profile')}</h5>
+
+                    {(chatPartner.minimumInvestment || chatPartner.maximumInvestment) && (
+                      <div className="flex gap-3 items-start bg-indigo-50/30 dark:bg-indigo-950/10 border border-indigo-100/50 dark:border-indigo-900/30 p-3 rounded-lg">
+                        <CircleDollarSign size={16} className="text-indigo-650 dark:text-indigo-400 shrink-0 mt-0.5" />
+                        <div>
+                          <div className="text-xs text-indigo-600 dark:text-indigo-400 font-semibold">{t('Investment Range')}</div>
+                          <div className="text-sm font-extrabold text-indigo-900 dark:text-white">
+                            ${parseFloat(chatPartner.minimumInvestment || '0').toLocaleString()} - ${parseFloat(chatPartner.maximumInvestment || '0').toLocaleString()}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {chatPartner.investmentStage && chatPartner.investmentStage.length > 0 && (
+                      <div className="space-y-1">
+                        <div className="text-xs text-gray-400">{t('Preferred Stages')}</div>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {chatPartner.investmentStage.map((s: string) => (
+                            <span key={s} className="px-2 py-0.5 bg-gray-100 dark:bg-gray-805 text-gray-600 dark:text-gray-300 rounded text-[10px] uppercase font-semibold">
+                              {s}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {chatPartner.investmentInterests && chatPartner.investmentInterests.length > 0 && (
+                      <div className="space-y-1">
+                        <div className="text-xs text-gray-400">{t('Interests')}</div>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {chatPartner.investmentInterests.map((interest: string) => (
+                            <span key={interest} className="px-2 py-0.5 bg-indigo-55/60 dark:bg-indigo-950/30 text-indigo-650 dark:text-indigo-400 rounded text-[10px] font-semibold">
+                              {interest}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Support Tools for Admin */}
+                {currentUser?.role === 'admin' && (
+                  <div className="space-y-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+                    <h5 className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+                      <History size={13} className="text-indigo-500" />
+                      {t('Support Management')}
+                    </h5>
+                    <Button
+                      fullWidth
+                      variant="outline"
+                      onClick={fetchArchives}
+                      className="flex items-center justify-center gap-2 border-indigo-200 text-indigo-600 hover:bg-indigo-50 dark:border-indigo-900/50 dark:text-indigo-400 dark:hover:bg-indigo-900/30"
+                    >
+                      <History size={16} />
+                      {t('View Past Sessions')}
+                    </Button>
+                  </div>
+                )}
+
+                {/* Book a Meeting Section */}
                 <div className="space-y-4 pt-4 border-t border-gray-100 dark:border-gray-800">
                   <h5 className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
-                    <History size={13} className="text-indigo-500" />
-                    {t('Support Management')}
+                    <Calendar size={13} className="text-indigo-500" />
+                    {t('Book a Meeting')}
                   </h5>
-                  <Button 
-                    fullWidth 
-                    variant="outline"
-                    onClick={fetchArchives}
-                    className="flex items-center justify-center gap-2 border-indigo-200 text-indigo-600 hover:bg-indigo-50 dark:border-indigo-900/50 dark:text-indigo-400 dark:hover:bg-indigo-900/30"
-                  >
-                    <History size={16} />
-                    {t('View Past Sessions')}
-                  </Button>
-                </div>
-              )}
 
-              {/* Book a Meeting Section */}
-              <div className="space-y-4 pt-4 border-t border-gray-100 dark:border-gray-800">
-                <h5 className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
-                  <Calendar size={13} className="text-indigo-500" />
-                  {t('Book a Meeting')}
-                </h5>
-                
-                {partnerMeeting ? (
-                  partnerMeeting.status === 'accepted' ? (
-                    <div className="bg-emerald-50/40 dark:bg-emerald-950/15 p-3 rounded-xl border border-emerald-100/80 dark:border-emerald-900/30 space-y-3 shadow-sm">
-                      <div className="flex justify-between items-center">
-                        <span className="text-[10px] font-extrabold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded">{t('Confirmed')}</span>
-                        <span className="text-[10px] text-gray-550 dark:text-gray-450 font-sans font-semibold">
-                          {format(new Date(partnerMeeting.startTime), 'p')}
-                        </span>
+                  {partnerMeeting ? (
+                    partnerMeeting.status === 'accepted' ? (
+                      <div className="bg-emerald-50/40 dark:bg-emerald-950/15 p-3 rounded-xl border border-emerald-100/80 dark:border-emerald-900/30 space-y-3 shadow-sm">
+                        <div className="flex justify-between items-center">
+                          <span className="text-[10px] font-extrabold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded">{t('Confirmed')}</span>
+                          <span className="text-[10px] text-gray-550 dark:text-gray-450 font-sans font-semibold">
+                            {format(new Date(partnerMeeting.startTime), 'p')}
+                          </span>
+                        </div>
+                        <div>
+                          <h6 className="text-xs font-bold text-gray-800 dark:text-gray-200 truncate">{partnerMeeting.title}</h6>
+                          <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate mt-0.5">
+                            {partnerMeeting.description || t('No description.')}
+                          </p>
+                        </div>
+                        <Button
+                          fullWidth
+                          onClick={() => navigate(partnerMeeting.roomUrl)}
+                          className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs py-2 shadow-md rounded-lg font-medium transition-all"
+                        >
+                          <Video size={14} />
+                          {t('Join Meeting')}
+                        </Button>
                       </div>
-                      <div>
-                        <h6 className="text-xs font-bold text-gray-800 dark:text-gray-200 truncate">{partnerMeeting.title}</h6>
-                        <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate mt-0.5">
-                          {partnerMeeting.description || t('No description.')}
-                        </p>
+                    ) : (
+                      <div className="bg-gray-50 dark:bg-gray-950/30 p-3 rounded-xl border border-gray-150 dark:border-gray-800 space-y-3 shadow-sm">
+                        <div className="flex justify-between items-center">
+                          <span className="text-[10px] font-extrabold text-amber-600 dark:text-amber-400 uppercase tracking-wider bg-amber-50/55 dark:bg-amber-950/30 px-2 py-0.5 rounded">{t('Pending')}</span>
+                          <span className="text-[10px] text-gray-550 dark:text-gray-450 font-sans font-semibold">
+                            {format(new Date(partnerMeeting.startTime), 'p')}
+                          </span>
+                        </div>
+                        <div>
+                          <h6 className="text-xs font-bold text-gray-800 dark:text-gray-200 truncate">{partnerMeeting.title}</h6>
+                          <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate mt-0.5">
+                            {partnerMeeting.description || t('No description.')}
+                          </p>
+                        </div>
+                        <Button
+                          fullWidth
+                          disabled
+                          className="flex items-center justify-center gap-2 bg-gray-250 dark:bg-gray-800 text-gray-400 dark:text-gray-500 text-xs py-2 rounded-lg font-medium cursor-not-allowed border border-gray-200/50 dark:border-gray-800"
+                        >
+                          <Calendar size={14} />
+                          {t('Awaiting Acceptance')}
+                        </Button>
                       </div>
-                      <Button
-                        fullWidth
-                        onClick={() => navigate(partnerMeeting.roomUrl)}
-                        className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs py-2 shadow-md rounded-lg font-medium transition-all"
-                      >
-                        <Video size={14} />
-                        {t('Join Meeting')}
-                      </Button>
-                    </div>
+                    )
+                  ) : !showBookForm ? (
+                    <Button
+                      variant="outline"
+                      fullWidth
+                      onClick={() => setShowBookForm(true)}
+                      className="flex items-center justify-center gap-2 border-indigo-100 dark:border-indigo-900/60 text-indigo-650 dark:text-indigo-400 hover:bg-indigo-50/50 dark:hover:bg-indigo-950/20 text-xs py-2 shadow-sm rounded-lg"
+                    >
+                      <Video size={14} />
+                      {t('Schedule Meeting')}
+                    </Button>
                   ) : (
-                    <div className="bg-gray-50 dark:bg-gray-950/30 p-3 rounded-xl border border-gray-150 dark:border-gray-800 space-y-3 shadow-sm">
-                      <div className="flex justify-between items-center">
-                        <span className="text-[10px] font-extrabold text-amber-600 dark:text-amber-400 uppercase tracking-wider bg-amber-50/55 dark:bg-amber-950/30 px-2 py-0.5 rounded">{t('Pending')}</span>
-                        <span className="text-[10px] text-gray-550 dark:text-gray-450 font-sans font-semibold">
-                          {format(new Date(partnerMeeting.startTime), 'p')}
-                        </span>
-                      </div>
-                      <div>
-                        <h6 className="text-xs font-bold text-gray-800 dark:text-gray-200 truncate">{partnerMeeting.title}</h6>
-                        <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate mt-0.5">
-                          {partnerMeeting.description || t('No description.')}
-                        </p>
-                      </div>
-                      <Button
-                        fullWidth
-                        disabled
-                        className="flex items-center justify-center gap-2 bg-gray-250 dark:bg-gray-800 text-gray-400 dark:text-gray-500 text-xs py-2 rounded-lg font-medium cursor-not-allowed border border-gray-200/50 dark:border-gray-800"
-                      >
-                        <Calendar size={14} />
-                        {t('Awaiting Acceptance')}
-                      </Button>
-                    </div>
-                  )
-                ) : !showBookForm ? (
-                  <Button
-                    variant="outline"
-                    fullWidth
-                    onClick={() => setShowBookForm(true)}
-                    className="flex items-center justify-center gap-2 border-indigo-100 dark:border-indigo-900/60 text-indigo-650 dark:text-indigo-400 hover:bg-indigo-50/50 dark:hover:bg-indigo-950/20 text-xs py-2 shadow-sm rounded-lg"
-                  >
-                    <Video size={14} />
-                    {t('Schedule Meeting')}
-                  </Button>
-                ) : (
-                  <form onSubmit={handleBookMeeting} className="space-y-3 bg-gray-50/50 dark:bg-gray-950/30 p-3.5 rounded-xl border border-gray-100 dark:border-gray-800">
-                    <Input
-                      label={t('Meeting Title')}
-                      placeholder={t('e.g. Project Alignment')}
-                      value={meetingTitle}
-                      onChange={(e) => setMeetingTitle(e.target.value)}
-                      required
-                      fullWidth
-                      className="text-xs text-gray-900 dark:text-white"
-                    />
-                    <Input
-                      label={t('Description')}
-                      placeholder={t('Optional')}
-                      value={meetingDesc}
-                      onChange={(e) => setMeetingDesc(e.target.value)}
-                      fullWidth
-                      className="text-xs text-gray-900 dark:text-white"
-                    />
-                    <div className="space-y-2">
+                    <form onSubmit={handleBookMeeting} className="space-y-3 bg-gray-50/50 dark:bg-gray-950/30 p-3.5 rounded-xl border border-gray-100 dark:border-gray-800">
                       <Input
-                        label={t('Date')}
-                        type="date"
-                        value={meetingDate}
-                        onChange={(e) => setMeetingDate(e.target.value)}
+                        label={t('Meeting Title')}
+                        placeholder={t('e.g. Project Alignment')}
+                        value={meetingTitle}
+                        onChange={(e) => setMeetingTitle(e.target.value)}
                         required
                         fullWidth
-                        className="text-xs text-gray-900 dark:text-white font-sans"
+                        className="text-xs text-gray-900 dark:text-white"
                       />
-                      <div className="grid grid-cols-2 gap-2">
+                      <Input
+                        label={t('Description')}
+                        placeholder={t('Optional')}
+                        value={meetingDesc}
+                        onChange={(e) => setMeetingDesc(e.target.value)}
+                        fullWidth
+                        className="text-xs text-gray-900 dark:text-white"
+                      />
+                      <div className="space-y-2">
                         <Input
-                          label={t('Start Time')}
-                          type="time"
-                          value={meetingStartTime}
-                          onChange={(e) => setMeetingStartTime(e.target.value)}
+                          label={t('Date')}
+                          type="date"
+                          value={meetingDate}
+                          onChange={(e) => setMeetingDate(e.target.value)}
                           required
                           fullWidth
                           className="text-xs text-gray-900 dark:text-white font-sans"
                         />
-                        <Input
-                          label={t('End Time')}
-                          type="time"
-                          value={meetingEndTime}
-                          onChange={(e) => setMeetingEndTime(e.target.value)}
-                          required
-                          fullWidth
-                          className="text-xs text-gray-900 dark:text-white font-sans"
-                        />
+                        <div className="grid grid-cols-2 gap-2">
+                          <Input
+                            label={t('Start Time')}
+                            type="time"
+                            value={meetingStartTime}
+                            onChange={(e) => setMeetingStartTime(e.target.value)}
+                            required
+                            fullWidth
+                            className="text-xs text-gray-900 dark:text-white font-sans"
+                          />
+                          <Input
+                            label={t('End Time')}
+                            type="time"
+                            value={meetingEndTime}
+                            onChange={(e) => setMeetingEndTime(e.target.value)}
+                            required
+                            fullWidth
+                            className="text-xs text-gray-900 dark:text-white font-sans"
+                          />
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex gap-2 pt-2">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setShowBookForm(false)}
-                        className="flex-1 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 text-xs py-1.5"
-                      >
-                        {t('Cancel')}
-                      </Button>
-                      <Button
-                        type="submit"
-                        size="sm"
-                        disabled={isBooking}
-                        className="flex-1 bg-indigo-600 hover:bg-indigo-750 text-white text-xs py-1.5 shadow-sm"
-                      >
-                        {isBooking ? <Loader2 className="animate-spin" size={14} /> : t('Confirm')}
-                      </Button>
-                    </div>
-                  </form>
-                )}
+                      <div className="flex gap-2 pt-2">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowBookForm(false)}
+                          className="flex-1 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 text-xs py-1.5"
+                        >
+                          {t('Cancel')}
+                        </Button>
+                        <Button
+                          type="submit"
+                          size="sm"
+                          disabled={isBooking}
+                          className="flex-1 bg-indigo-600 hover:bg-indigo-750 text-white text-xs py-1.5 shadow-sm"
+                        >
+                          {isBooking ? <Loader2 className="animate-spin" size={14} /> : t('Confirm')}
+                        </Button>
+                      </div>
+                    </form>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
+          </React.Fragment>
         )}
       </div>
 
@@ -1677,9 +1685,9 @@ export const ChatPage: React.FC = () => {
                   <Button variant="outline" type="button" fullWidth onClick={() => setShowPaymentModal(false)}>
                     Cancel
                   </Button>
-                  <Button 
-                    type="submit" 
-                    fullWidth 
+                  <Button
+                    type="submit"
+                    fullWidth
                     isLoading={isSubmittingPayment}
                     disabled={currentUser?.role === 'investor' && !agreementAccepted}
                   >
@@ -1697,14 +1705,14 @@ export const ChatPage: React.FC = () => {
         <div className="fixed inset-0 bg-gray-950/70 backdrop-blur-md z-50 flex items-center justify-center p-4">
           <Card className="w-full max-w-md shadow-2xl border border-gray-100 dark:border-none bg-gradient-to-br from-white to-gray-50 dark:from-indigo-950 dark:to-slate-900 text-gray-900 dark:text-white relative overflow-hidden">
             <div className="absolute top-0 right-0 p-4">
-              <button 
-                onClick={() => setShowReceipt(false)} 
+              <button
+                onClick={() => setShowReceipt(false)}
                 className="text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors"
               >
                 <X size={20} />
               </button>
             </div>
-            
+
             <CardBody className="p-8 text-center flex flex-col items-center">
               {/* Branding */}
               <div className="mb-4">
@@ -1719,7 +1727,7 @@ export const ChatPage: React.FC = () => {
               <div className="w-16 h-16 bg-emerald-50 dark:bg-emerald-500/20 text-emerald-500 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30 rounded-full flex items-center justify-center mb-4 mt-2">
                 <CheckCircle size={32} className="animate-bounce" />
               </div>
-              
+
               <span className="text-emerald-600 dark:text-emerald-400 text-xs font-semibold tracking-wider uppercase mb-1">Transaction Successful</span>
               <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white mb-6">
                 ${receiptData.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
@@ -1750,16 +1758,16 @@ export const ChatPage: React.FC = () => {
               </div>
 
               <div className="w-full flex gap-3">
-                <Button 
-                  variant="outline" 
-                  fullWidth 
+                <Button
+                  variant="outline"
+                  fullWidth
                   onClick={() => setShowReceipt(false)}
                   className="border-gray-300 dark:border-white/10 text-gray-700 dark:text-white hover:bg-gray-50 dark:hover:bg-white/5"
                 >
                   Close
                 </Button>
-                <Button 
-                  fullWidth 
+                <Button
+                  fullWidth
                   onClick={downloadReceiptImage}
                   className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-600/30"
                 >
@@ -1827,15 +1835,14 @@ export const ChatPage: React.FC = () => {
                         return (
                           <div
                             key={i}
-                            className={`flex ${ isUserMsg ? 'justify-start' : 'justify-end'}`}
+                            className={`flex ${isUserMsg ? 'justify-start' : 'justify-end'}`}
                           >
-                            <div className={`max-w-[75%] px-3 py-2 rounded-xl text-sm ${
-                              isUserMsg
+                            <div className={`max-w-[75%] px-3 py-2 rounded-xl text-sm ${isUserMsg
                                 ? 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-tl-none'
                                 : 'bg-indigo-600 text-white rounded-tr-none'
-                            }`}>
+                              }`}>
                               <p>{msg.content}</p>
-                              <p className={`text-[10px] mt-1 ${ isUserMsg ? 'text-gray-400' : 'text-indigo-200'}`}>
+                              <p className={`text-[10px] mt-1 ${isUserMsg ? 'text-gray-400' : 'text-indigo-200'}`}>
                                 {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                               </p>
                             </div>

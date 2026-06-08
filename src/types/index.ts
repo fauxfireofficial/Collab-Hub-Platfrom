@@ -1,7 +1,8 @@
-export type UserRole = 'entrepreneur' | 'investor';
+export type UserRole = 'entrepreneur' | 'investor' | 'admin';
 
 export interface User {
   id: string;
+  _id?: string;
   name: string;
   email: string;
   role: UserRole;
@@ -9,6 +10,7 @@ export interface User {
   bio: string;
   isOnline?: boolean;
   walletBalance?: number;
+  supportSessionActive?: boolean;
   createdAt: string;
 }
 

@@ -21,7 +21,7 @@ interface Document {
   ownerId: string;
 }
 
-const SERVER_URL = import.meta.env.VITE_API_BASE || 'http://localhost:5000';
+const SERVER_URL = import.meta.env.VITE_API_BASE || import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 export const DocumentsPage: React.FC = () => {
   const { t } = useTranslation();
@@ -44,11 +44,11 @@ export const DocumentsPage: React.FC = () => {
     try {
       // Replace static '/uploads/' path with download endpoint '/api/documents/download/'
       let downloadUrl = url.replace('/uploads/', '/api/documents/download/');
-      
+
       if (fileName) {
         downloadUrl += `?name=${encodeURIComponent(fileName)}`;
       }
-      
+
       // Navigate to download URL; since it returns Content-Disposition: attachment,
       // the browser will download it without navigating away from the page.
       window.location.href = downloadUrl;
@@ -83,7 +83,7 @@ export const DocumentsPage: React.FC = () => {
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
-    
+
     const file = e.target.files[0];
     const formData = new FormData();
     formData.append('document', file);
@@ -144,7 +144,7 @@ export const DocumentsPage: React.FC = () => {
     ctx.strokeStyle = '#000000';
     ctx.lineWidth = 3;
     ctx.lineCap = 'round';
-    
+
     const rect = canvas.getBoundingClientRect();
     ctx.beginPath();
     ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
@@ -178,7 +178,7 @@ export const DocumentsPage: React.FC = () => {
   const saveSignature = async () => {
     const canvas = canvasRef.current;
     if (!canvas || !selectedDoc) return;
-    
+
     // Check if canvas is blank
     const blank = document.createElement('canvas');
     blank.width = canvas.width;
@@ -222,17 +222,17 @@ export const DocumentsPage: React.FC = () => {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('Document Processing Chamber')}</h1>
           <p className="text-gray-600 dark:text-gray-400">{t('Upload agreements, preview PDFs, and apply hand-drawn e-signatures')}</p>
         </div>
-        
+
         <div>
-          <input 
-            type="file" 
-            ref={fileInputRef} 
-            className="hidden" 
+          <input
+            type="file"
+            ref={fileInputRef}
+            className="hidden"
             accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.xlsx"
             onChange={handleFileChange}
           />
-          <Button 
-            leftIcon={<Upload size={18} />} 
+          <Button
+            leftIcon={<Upload size={18} />}
             onClick={handleUploadClick}
             isLoading={isUploading}
           >
@@ -240,9 +240,9 @@ export const DocumentsPage: React.FC = () => {
           </Button>
         </div>
       </div>
-      
+
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        
+
         {/* Document list */}
         <div className="lg:col-span-3">
           <Card>
@@ -263,7 +263,7 @@ export const DocumentsPage: React.FC = () => {
                       <div className="p-2 bg-primary-50 dark:bg-primary-900/30 rounded-lg mr-4">
                         <FileText size={24} className="text-primary-600" />
                       </div>
-                      
+
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <h3 className="text-sm font-medium text-gray-900 dark:text-white truncate">
@@ -276,14 +276,14 @@ export const DocumentsPage: React.FC = () => {
                             <Badge variant="success" size="sm">{t('Signed')}</Badge>
                           )}
                         </div>
-                        
+
                         <div className="flex items-center gap-4 mt-1 text-sm text-gray-500 dark:text-gray-400">
                           <span>{doc.type}</span>
                           <span>{doc.size}</span>
                           <span>{t('Uploaded')} {format(new Date(doc.createdAt), 'PP')}</span>
                         </div>
                       </div>
-                      
+
                       <div className="flex items-center gap-2 ml-4">
                         <Button
                           variant="ghost"
@@ -297,7 +297,7 @@ export const DocumentsPage: React.FC = () => {
                         >
                           <Download size={18} />
                         </Button>
-                        
+
                         <Button
                           variant="ghost"
                           size="sm"
@@ -307,7 +307,7 @@ export const DocumentsPage: React.FC = () => {
                         >
                           <Share2 size={18} className={doc.shared ? 'text-primary-600' : ''} />
                         </Button>
-                        
+
                         <Button
                           variant="ghost"
                           size="sm"
@@ -362,8 +362,8 @@ export const DocumentsPage: React.FC = () => {
 
                   {/* Sign Button */}
                   {!selectedDoc.signatureImage ? (
-                    <Button 
-                      fullWidth 
+                    <Button
+                      fullWidth
                       leftIcon={<PenTool size={16} />}
                       onClick={() => setShowSignModal(true)}
                     >
@@ -374,10 +374,10 @@ export const DocumentsPage: React.FC = () => {
                       <div className="flex items-center justify-center gap-1 text-success-700 font-semibold text-sm mb-2">
                         <Check size={16} /> Signed
                       </div>
-                      <img 
-                        src={selectedDoc.signatureImage} 
-                        alt="Signature stamp" 
-                        className="max-h-16 mx-auto bg-white border border-gray-200 p-1 rounded" 
+                      <img
+                        src={selectedDoc.signatureImage}
+                        alt="Signature stamp"
+                        className="max-h-16 mx-auto bg-white border border-gray-200 p-1 rounded"
                       />
                     </div>
                   )}
@@ -409,7 +409,7 @@ export const DocumentsPage: React.FC = () => {
               <p className="text-sm text-gray-600">
                 Draw your signature on the white board below using your mouse or touchpad.
               </p>
-              
+
               <div className="border-2 border-dashed border-gray-300 rounded-lg overflow-hidden bg-white">
                 <canvas
                   ref={canvasRef}

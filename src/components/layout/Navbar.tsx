@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { Menu, X, Bell, MessageCircle, User, LogOut, Building2, CircleDollarSign, Shield } from 'lucide-react';
+import { Menu, X, Bell, MessageCircle, User, LogOut, Building2, CircleDollarSign, Shield, Users, FileText, Calendar, Settings, HelpCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { Avatar } from '../ui/Avatar';
@@ -170,7 +170,7 @@ export const Navbar: React.FC = () => {
 
       {/* Mobile menu */}
       {isMenuOpen && (
-        <div className="md:hidden bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 animate-fade-in">
+        <div className="md:hidden bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 animate-fade-in max-h-[85vh] overflow-y-auto">
           <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
             {user ? (
               <>
@@ -187,6 +187,7 @@ export const Navbar: React.FC = () => {
                   </div>
                 </div>
 
+                {/* Main nav links */}
                 <div className="border-t border-gray-200 dark:border-gray-700 pt-2">
                   {navLinks.map((link, index) => (
                     <Link
@@ -199,13 +200,62 @@ export const Navbar: React.FC = () => {
                       {t(link.text)}
                     </Link>
                   ))}
+                </div>
 
+                {/* Sidebar links — role-based */}
+                <div className="border-t border-gray-200 dark:border-gray-700 pt-2">
+                  <p className="px-3 py-1 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">{t('Navigation')}</p>
+                  {user.role === 'entrepreneur' && (
+                    <>
+                      <Link to="/meetings" className="flex items-center px-3 py-2 text-base font-medium text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md" onClick={() => setIsMenuOpen(false)}>
+                        <Calendar size={18} className="me-3" />{t('Meetings & Calendar')}
+                      </Link>
+                      <Link to="/documents" className="flex items-center px-3 py-2 text-base font-medium text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md" onClick={() => setIsMenuOpen(false)}>
+                        <FileText size={18} className="me-3" />{t('Documents')}
+                      </Link>
+                      <Link to="/payments" className="flex items-center px-3 py-2 text-base font-medium text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md" onClick={() => setIsMenuOpen(false)}>
+                        <CircleDollarSign size={18} className="me-3" />{t('Wallet & Payments')}
+                      </Link>
+                    </>
+                  )}
+                  {user.role === 'investor' && (
+                    <>
+                      <Link to="/entrepreneurs" className="flex items-center px-3 py-2 text-base font-medium text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md" onClick={() => setIsMenuOpen(false)}>
+                        <Users size={18} className="me-3" />{t('Find Startups')}
+                      </Link>
+                      <Link to="/meetings" className="flex items-center px-3 py-2 text-base font-medium text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md" onClick={() => setIsMenuOpen(false)}>
+                        <Calendar size={18} className="me-3" />{t('Meetings & Calendar')}
+                      </Link>
+                      <Link to="/deals" className="flex items-center px-3 py-2 text-base font-medium text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md" onClick={() => setIsMenuOpen(false)}>
+                        <FileText size={18} className="me-3" />{t('Deals')}
+                      </Link>
+                      <Link to="/payments" className="flex items-center px-3 py-2 text-base font-medium text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md" onClick={() => setIsMenuOpen(false)}>
+                        <CircleDollarSign size={18} className="me-3" />{t('Wallet & Payments')}
+                      </Link>
+                    </>
+                  )}
+                  {user.role === 'admin' && (
+                    <Link to="/payments" className="flex items-center px-3 py-2 text-base font-medium text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md" onClick={() => setIsMenuOpen(false)}>
+                      <CircleDollarSign size={18} className="me-3" />{t('Wallet & Payments')}
+                    </Link>
+                  )}
+                </div>
+
+                {/* Settings links */}
+                <div className="border-t border-gray-200 dark:border-gray-700 pt-2">
+                  <p className="px-3 py-1 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">{t('Settings')}</p>
+                  <Link to="/settings" className="flex items-center px-3 py-2 text-base font-medium text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md" onClick={() => setIsMenuOpen(false)}>
+                    <Settings size={18} className="me-3" />{t('Settings')}
+                  </Link>
+                  <Link to="/help" className="flex items-center px-3 py-2 text-base font-medium text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md" onClick={() => setIsMenuOpen(false)}>
+                    <HelpCircle size={18} className="me-3" />{t('Help & Support')}
+                  </Link>
                   <button
                     onClick={() => {
                       handleLogout();
                       setIsMenuOpen(false);
                     }}
-                    className="flex w-full items-center px-3 py-2 text-base font-medium text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md"
+                    className="flex w-full items-center px-3 py-2 text-base font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md"
                   >
                     <LogOut size={18} className="me-3" />
                     {t('Logout')}

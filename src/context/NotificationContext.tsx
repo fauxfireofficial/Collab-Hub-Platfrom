@@ -44,7 +44,7 @@ interface NotificationContextType {
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
@@ -102,8 +102,8 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       const icon = notification.type === 'message'
         ? '💬'
         : notification.type === 'connection_accepted'
-        ? '🤝'
-        : '🔔';
+          ? '🤝'
+          : '🔔';
 
       toast(notification.content, {
         icon,

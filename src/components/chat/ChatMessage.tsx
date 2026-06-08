@@ -114,20 +114,18 @@ const VoicePlayer: React.FC<VoicePlayerProps> = ({ url, isCurrentUser }) => {
   };
 
   return (
-    <div className={`flex items-center space-x-3 p-3.5 border rounded-2xl max-w-xs sm:max-w-sm text-gray-800 shadow-sm transition-all ${
-      isCurrentUser 
-        ? 'bg-primary-50 border-primary-100 hover:bg-primary-100/50' 
+    <div className={`flex items-center space-x-3 p-3.5 border rounded-2xl max-w-xs sm:max-w-sm text-gray-800 shadow-sm transition-all ${isCurrentUser
+        ? 'bg-primary-50 border-primary-100 hover:bg-primary-100/50'
         : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
-    }`}>
+      }`}>
       {/* Play/Pause Button */}
       <button
         type="button"
         onClick={togglePlay}
-        className={`w-11 h-11 rounded-full flex items-center justify-center transition-all ${
-          isCurrentUser 
-            ? 'bg-primary-600 hover:bg-primary-700 text-white shadow-sm' 
+        className={`w-11 h-11 rounded-full flex items-center justify-center transition-all ${isCurrentUser
+            ? 'bg-primary-600 hover:bg-primary-700 text-white shadow-sm'
             : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300'
-        }`}
+          }`}
       >
         {isPlaying ? (
           <Pause size={16} fill="currentColor" />
@@ -145,9 +143,8 @@ const VoicePlayer: React.FC<VoicePlayerProps> = ({ url, isCurrentUser }) => {
             max={duration || 100}
             value={currentTime}
             onChange={handleProgressChange}
-            className={`w-full h-1 rounded-lg appearance-none cursor-pointer focus:outline-none accent-primary-600 ${
-              isCurrentUser ? 'bg-primary-200' : 'bg-gray-200 dark:bg-gray-600'
-            }`}
+            className={`w-full h-1 rounded-lg appearance-none cursor-pointer focus:outline-none accent-primary-600 ${isCurrentUser ? 'bg-primary-200' : 'bg-gray-200 dark:bg-gray-600'
+              }`}
           />
         </div>
         <div className="flex justify-between items-center mt-1.5 select-none">
@@ -284,7 +281,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
   const renderAttachment = () => {
     if (!attachmentData) return null;
     const fileUrl = attachmentData.fileUrl;
-    const fullFileUrl = fileUrl.startsWith('http') ? fileUrl : `http://localhost:5000${fileUrl}`;
+    const fullFileUrl = fileUrl.startsWith('http') ? fileUrl : `import.meta.env.VITE_API_URL${fileUrl}`;
     const caption: string | undefined = attachmentData.caption;
 
     // ── Voice Note ─────────────────────────────────────────────────────────
@@ -348,17 +345,16 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
 
     return (
       <div className="flex items-center space-x-3 p-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg max-w-xs sm:max-w-sm text-gray-800 shadow-sm relative">
-        <div className={`p-2.5 rounded-lg ${
-          isPdf ? 'bg-red-50 text-red-600' :
-          isExcel ? 'bg-green-50 text-green-600' :
-          isLegal ? 'bg-blue-50 text-blue-600' : 'bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
-        }`}>
+        <div className={`p-2.5 rounded-lg ${isPdf ? 'bg-red-50 text-red-600' :
+            isExcel ? 'bg-green-50 text-green-600' :
+              isLegal ? 'bg-blue-50 text-blue-600' : 'bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
+          }`}>
           {isPdf && <FileText size={24} />}
           {isExcel && <FileSpreadsheet size={24} />}
           {isLegal && <Scale size={24} />}
           {!isPdf && !isExcel && !isLegal && <FileText size={24} />}
         </div>
-        
+
         <div className="flex-1 min-w-0 pr-6">
           <p className="text-sm font-semibold text-gray-900 dark:text-white truncate" title={attachmentData.fileName}>
             {attachmentData.fileName}
@@ -366,12 +362,12 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
           <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
             {attachmentData.fileSize} • {
               isPdf ? 'PITCH DECK' :
-              isExcel ? 'FINANCIAL MODEL' :
-              isLegal ? 'LEGAL/NDA' : 'DOCUMENT'
+                isExcel ? 'FINANCIAL MODEL' :
+                  isLegal ? 'LEGAL/NDA' : 'DOCUMENT'
             }
           </p>
         </div>
-        
+
         <button
           type="button"
           onClick={(e) => {
@@ -403,19 +399,17 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
           className="mr-2 self-end"
         />
       )}
-      
+
       <div className={`flex flex-col ${isCurrentUser ? 'items-end' : 'items-start'}`}>
         <div className="flex items-center space-x-2 group relative" ref={menuRef}>
           <div
-            className={`max-w-xs sm:max-w-md rounded-lg relative ${
-              isAttachment
+            className={`max-w-xs sm:max-w-md rounded-lg relative ${isAttachment
                 ? 'p-1 bg-transparent'
-                : `px-4 py-2 ${
-                    isCurrentUser
-                      ? 'bg-primary-600 text-white rounded-br-none'
-                      : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-bl-none'
-                  }`
-            }`}
+                : `px-4 py-2 ${isCurrentUser
+                  ? 'bg-primary-600 text-white rounded-br-none'
+                  : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-bl-none'
+                }`
+              }`}
           >
             {/* ─── Chevron dropdown trigger ───────────────────────────── */}
             {((isCurrentUser && !isAttachment) || isAttachment) && !isEditing && (
@@ -427,11 +421,10 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
                     setShowMenu(!showMenu);
                     setShowDeleteConfirm(false);
                   }}
-                  className={`opacity-0 group-hover:opacity-100 p-0.5 rounded-full transition-all duration-150 focus:opacity-100 focus:outline-none shadow-sm ${
-                    isCurrentUser && !isAttachment
+                  className={`opacity-0 group-hover:opacity-100 p-0.5 rounded-full transition-all duration-150 focus:opacity-100 focus:outline-none shadow-sm ${isCurrentUser && !isAttachment
                       ? 'text-white hover:text-white hover:bg-primary-700 bg-primary-600 border border-primary-500'
                       : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100 bg-white border border-gray-200'
-                  }`}
+                    }`}
                   aria-label="Message options"
                 >
                   <ChevronDown size={14} />
@@ -447,7 +440,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
                           onClick={() => {
                             setShowMenu(false);
                             const fileUrl = attachmentData.fileUrl;
-                            const fullFileUrl = fileUrl.startsWith('http') ? fileUrl : `http://localhost:5000${fileUrl}`;
+                            const fullFileUrl = fileUrl.startsWith('http') ? fileUrl : `import.meta.env.VITE_API_URL${fileUrl}`;
                             downloadFile(fullFileUrl, resolvedDownloadName);
                           }}
                           className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 flex items-center font-medium"
@@ -532,20 +525,18 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
                   onChange={(e) => setEditValue(e.target.value)}
                   onKeyDown={handleKeyDown}
                   rows={2}
-                  className={`w-full text-sm rounded p-1.5 focus:outline-none focus:ring-1 ${
-                    isCurrentUser
+                  className={`w-full text-sm rounded p-1.5 focus:outline-none focus:ring-1 ${isCurrentUser
                       ? 'bg-primary-700 text-white border-primary-500 focus:ring-white placeholder-primary-300'
                       : 'bg-white text-gray-800 border-gray-300 focus:ring-primary-500'
-                  }`}
+                    }`}
                   autoFocus
                 />
                 <div className="flex justify-end space-x-1.5">
                   <button
                     type="button"
                     onClick={() => setIsEditing(false)}
-                    className={`p-1 rounded-full transition-colors ${
-                      isCurrentUser ? 'hover:bg-primary-700 text-primary-200' : 'hover:bg-gray-200 text-gray-500'
-                    }`}
+                    className={`p-1 rounded-full transition-colors ${isCurrentUser ? 'hover:bg-primary-700 text-primary-200' : 'hover:bg-gray-200 text-gray-500'
+                      }`}
                     title="Cancel"
                   >
                     <X size={14} />
@@ -554,11 +545,10 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
                     type="button"
                     onClick={handleSave}
                     disabled={!editValue.trim() || editValue.trim() === message.content}
-                    className={`p-1 rounded-full transition-colors ${
-                      isCurrentUser
+                    className={`p-1 rounded-full transition-colors ${isCurrentUser
                         ? 'hover:bg-primary-700 text-white disabled:text-primary-400'
                         : 'hover:bg-gray-200 text-primary-600 disabled:text-gray-400'
-                    }`}
+                      }`}
                     title="Save"
                   >
                     <Check size={14} />
@@ -620,7 +610,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
                 type="button"
                 onClick={() => {
                   const fileUrl = attachmentData.fileUrl;
-                  const fullFileUrl = fileUrl.startsWith('http') ? fileUrl : `http://localhost:5000${fileUrl}`;
+                  const fullFileUrl = fileUrl.startsWith('http') ? fileUrl : `import.meta.env.VITE_API_URL${fileUrl}`;
                   downloadFile(fullFileUrl, resolvedDownloadName);
                 }}
                 className="p-2 rounded-full hover:bg-white/10 text-gray-200 hover:text-white transition-colors focus:outline-none"
@@ -648,7 +638,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
               <video
                 src={attachmentData.fileUrl.startsWith('http')
                   ? attachmentData.fileUrl
-                  : `http://localhost:5000${attachmentData.fileUrl}`}
+                  : `import.meta.env.VITE_API_URL${attachmentData.fileUrl}`}
                 controls
                 autoPlay
                 className="max-w-full max-h-[85vh] rounded-xl shadow-2xl"
@@ -658,7 +648,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
               <img
                 src={attachmentData.fileUrl.startsWith('http')
                   ? attachmentData.fileUrl
-                  : `http://localhost:5000${attachmentData.fileUrl}`}
+                  : `import.meta.env.VITE_API_URL${attachmentData.fileUrl}`}
                 alt={attachmentData.fileName}
                 className="max-w-full max-h-[85vh] object-contain rounded-xl shadow-2xl select-none cursor-zoom-out"
                 onClick={(e) => e.stopPropagation()}
