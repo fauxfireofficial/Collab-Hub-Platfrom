@@ -39,10 +39,18 @@ router.get('/entrepreneurs', auth, async (req, res) => {
 // @desc    Get profile by user id
 router.get('/profile/:id', auth, async (req, res) => {
   try {
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    const userId = req.params.id;
+    
+    // Hardcoded check if frontend sends mock IDs
+    if (userId === 'e1' || userId === 'i1' || userId === 'admin') {
+       return res.status(400).json({ message: 'Mock data IDs are not valid in the database' });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
       return res.status(400).json({ message: 'Invalid User ID format' });
     }
-    const profile = await User.findById(req.params.id);
+    
+    const profile = await User.findById(userId);
     if (!profile) {
       return res.status(404).json({ message: 'Profile not found' });
     }
@@ -294,8 +302,8 @@ router.post('/support/end', auth, async (req, res) => {
       return res.status(403).json({ message: 'Only admins can end a support session' });
     }
     const { userId } = req.body;
-    if (!userId) {
-      return res.status(400).json({ message: 'User ID is required' });
+    if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ message: 'Valid User ID is required' });
     }
     
     // 1. Mark user's session as inactive
