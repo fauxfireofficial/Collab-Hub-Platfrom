@@ -34,6 +34,7 @@ import { DocumentsPage } from './pages/documents/DocumentsPage';
 import { SettingsPage } from './pages/settings/SettingsPage';
 import { HelpPage } from './pages/help/HelpPage';
 import { DealsPage } from './pages/deals/DealsPage';
+import { DealDetailPage } from './pages/deals/DealDetailPage';
 
 // Chat Pages
 import { ChatPage } from './pages/chat/ChatPage';
@@ -119,6 +120,7 @@ function App() {
           
           <Route path="/deals" element={<DashboardLayout />}>
             <Route index element={<DealsPage />} />
+            <Route path=":dealId" element={<DealDetailPage />} />
           </Route>
           
           {/* Chat Routes */}

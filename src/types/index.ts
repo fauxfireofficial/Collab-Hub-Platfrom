@@ -85,3 +85,31 @@ export interface AuthContextType {
   verify2FA: (userId: string, code: string) => Promise<{ role?: UserRole } | void>;
   verifyEmail: (userId: string, code: string) => Promise<{ role?: UserRole } | void>;
 }
+
+export type DealStatus = 'Due Diligence' | 'Term Sheet' | 'Negotiation' | 'Closed' | 'Passed';
+export type DealStage = 'Pre-seed' | 'Seed' | 'Series A' | 'Series B' | 'Series C' | 'Growth';
+
+export interface DealActivity {
+  id: string;
+  date: string;
+  type: 'note' | 'file' | 'status_change' | 'meeting';
+  description: string;
+  by: string;
+}
+
+export interface Deal {
+  id: number;
+  startup: {
+    name: string;
+    logo: string;
+    industry: string;
+  };
+  amount: string;
+  equity: string;
+  status: DealStatus;
+  stage: DealStage;
+  lastActivity: string;
+  notes?: string;
+  activities?: DealActivity[];
+  files?: { name: string; size: string; uploadedAt: string }[];
+}
