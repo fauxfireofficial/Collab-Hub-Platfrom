@@ -33,7 +33,7 @@ export const DealDetailPage: React.FC = () => {
           // ignore
         }
       }
-      const foundDeal = allDeals.find((d: Deal) => d.id === parseInt(dealId));
+      const foundDeal = allDeals.find((d: any) => String(d.id) === String(dealId));
       if (foundDeal) {
         setDeal(foundDeal);
       }
