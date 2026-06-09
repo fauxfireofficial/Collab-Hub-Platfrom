@@ -98,7 +98,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Register function
-  const register = async (name: string, email: string, password: string, role: UserRole): Promise<{ requiresVerification?: boolean; userId?: string; email?: string } | void> => {
+  const register = async (name: string, email: string, password: string, role: UserRole): Promise<{ requiresVerification?: boolean; tempToken?: string; email?: string } | void> => {
     setIsLoading(true);
     try {
       const response = await api.post('/auth/register', { name, email, password, role });
@@ -106,7 +106,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         toast.success('Email verification code sent to your Gmail!');
         return {
           requiresVerification: true,
-          userId: response.data.userId,
+          tempToken: response.data.tempToken,
           email: response.data.email
         };
       }
@@ -126,10 +126,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Verify Email (Registration OTP) function
-  const verifyEmail = async (userId: string, code: string): Promise<{ role?: UserRole } | void> => {
+  const verifyEmail = async (tempToken: string, code: string): Promise<{ role?: UserRole } | void> => {
     setIsLoading(true);
     try {
-      const response = await api.post('/auth/verify-email', { userId, code });
+      const response = await api.post('/auth/verify-email', { tempToken, code });
       const { token, user: loggedUser } = response.data;
       
       localStorage.setItem(TOKEN_STORAGE_KEY, token);

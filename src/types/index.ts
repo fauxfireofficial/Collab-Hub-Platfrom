@@ -75,7 +75,7 @@ export interface Document {
 export interface AuthContextType {
   user: User | null;
   login: (email: string, password: string, role?: UserRole) => Promise<{ require2FA?: boolean; requiresVerification?: boolean; userId?: string; email?: string; role?: UserRole } | void>;
-  register: (name: string, email: string, password: string, role: UserRole) => Promise<{ requiresVerification?: boolean; userId?: string; email?: string } | void>;
+  register: (name: string, email: string, password: string, role: UserRole) => Promise<{ requiresVerification?: boolean; tempToken?: string; email?: string } | void>;
   logout: () => void;
   forgotPassword: (email: string) => Promise<void>;
   resetPassword: (email: string, token: string, newPassword: string) => Promise<void>;
@@ -83,7 +83,7 @@ export interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   verify2FA: (userId: string, code: string) => Promise<{ role?: UserRole } | void>;
-  verifyEmail: (userId: string, code: string) => Promise<{ role?: UserRole } | void>;
+  verifyEmail: (tempToken: string, code: string) => Promise<{ role?: UserRole } | void>;
 }
 
 export type DealStatus = 'Due Diligence' | 'Term Sheet' | 'Negotiation' | 'Closed' | 'Passed';

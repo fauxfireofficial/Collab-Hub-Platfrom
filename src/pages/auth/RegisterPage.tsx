@@ -18,7 +18,7 @@ export const RegisterPage: React.FC = () => {
   // Verification States
   const [showVerification, setShowVerification] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [tempUserId, setTempUserId] = useState('');
+  const [tempToken, setTempToken] = useState('');
   const [verificationEmail, setVerificationEmail] = useState('');
   const [otpCode, setOtpCode] = useState('');
   
@@ -40,7 +40,7 @@ export const RegisterPage: React.FC = () => {
       const res = await register(name, email, password, role);
       if (res && res.requiresVerification) {
         setShowVerification(true);
-        setTempUserId(res.userId || '');
+        setTempToken(res.tempToken || '');
         setVerificationEmail(res.email || '');
         setIsLoading(false);
       } else {
@@ -58,7 +58,7 @@ export const RegisterPage: React.FC = () => {
     setIsLoading(true);
     
     try {
-      await verifyEmail(tempUserId, otpCode);
+      await verifyEmail(tempToken, otpCode);
       navigate(role === 'entrepreneur' ? '/dashboard/entrepreneur' : '/dashboard/investor');
     } catch (err) {
       setError((err as Error).message);
