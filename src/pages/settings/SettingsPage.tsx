@@ -32,8 +32,16 @@ export const SettingsPage: React.FC = () => {
   const [showNewPw, setShowNewPw] = useState(false);
   const [showConfirmPw, setShowConfirmPw] = useState(false);
 
-  // Two-Factor Authentication state
-  const [twoFAEnabled, setTwoFAEnabled] = useState(false);
+  // Two-Factor Authentication state — persisted in localStorage
+  const [twoFAEnabled, setTwoFAEnabled] = useState<boolean>(
+    () => localStorage.getItem('nexus_2fa_enabled') === 'true'
+  );
+
+  const handleToggle2FA = () => {
+    const next = !twoFAEnabled;
+    setTwoFAEnabled(next);
+    localStorage.setItem('nexus_2fa_enabled', String(next));
+  };
 
   if (!user) return null;
 
@@ -114,7 +122,10 @@ export const SettingsPage: React.FC = () => {
                   <Input
                     label={t('Email')}
                     type="email"
-                    defaultValue={user.email}
+                    value={user.email}
+                    disabled
+                    readOnly
+                    helperText={t('Email cannot be changed')}
                   />
 
                   <Input
@@ -155,32 +166,37 @@ export const SettingsPage: React.FC = () => {
                 <h2 className="text-lg font-medium text-gray-900 dark:text-white">{t('Security Settings')}</h2>
               </CardHeader>
               <CardBody className="space-y-6">
-                <div>
-                  <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-4">{t('Two-Factor Authentication')}</h3>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-full transition-colors duration-300 ${twoFAEnabled
-                          ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400'
-                          : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'
-                        }`}>
-                        {twoFAEnabled ? <ShieldCheck size={20} /> : <Shield size={20} />}
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          {t('Add an extra layer of security to your account')}
-                        </p>
-                        <Badge variant={twoFAEnabled ? 'success' : 'error'} className="mt-1">
-                          {twoFAEnabled ? t('Enabled') : t('Not Enabled')}
-                        </Badge>
-                      </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2.5 rounded-xl transition-all duration-300 ${
+                      twoFAEnabled
+                        ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 shadow-sm'
+                        : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'
+                    }`}>
+                      {twoFAEnabled ? <ShieldCheck size={22} /> : <Shield size={22} />}
                     </div>
-                    <Button
-                      variant={twoFAEnabled ? 'outline' : 'primary'}
-                      onClick={() => setTwoFAEnabled(!twoFAEnabled)}
-                    >
-                      {twoFAEnabled ? t('Disable') : t('Enable')}
-                    </Button>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">{t('Two-Factor Authentication')}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                        {twoFAEnabled
+                          ? t('Your account has an extra layer of protection')
+                          : t('Add an extra layer of security to your account')}
+                      </p>
+                      <Badge variant={twoFAEnabled ? 'success' : 'error'} className="mt-1.5">
+                        {twoFAEnabled ? t('Enabled') : t('Not Enabled')}
+                      </Badge>
+                    </div>
                   </div>
+                  {/* Professional toggle switch */}
+                  <label className="relative inline-flex items-center cursor-pointer" title={twoFAEnabled ? 'Disable 2FA' : 'Enable 2FA'}>
+                    <input
+                      type="checkbox"
+                      className="sr-only peer"
+                      checked={twoFAEnabled}
+                      onChange={handleToggle2FA}
+                    />
+                    <div className="w-12 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-500/30 rounded-full peer peer-checked:after:translate-x-6 peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500 transition-colors duration-300"></div>
+                  </label>
                 </div>
 
                 <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
@@ -189,6 +205,7 @@ export const SettingsPage: React.FC = () => {
                     <Input
                       label={t('Current Password')}
                       type={showCurrentPw ? 'text' : 'password'}
+                      fullWidth
                       endAdornment={
                         <button
                           type="button"
@@ -204,6 +221,7 @@ export const SettingsPage: React.FC = () => {
                     <Input
                       label={t('New Password')}
                       type={showNewPw ? 'text' : 'password'}
+                      fullWidth
                       endAdornment={
                         <button
                           type="button"
@@ -219,6 +237,7 @@ export const SettingsPage: React.FC = () => {
                     <Input
                       label={t('Confirm New Password')}
                       type={showConfirmPw ? 'text' : 'password'}
+                      fullWidth
                       endAdornment={
                         <button
                           type="button"
