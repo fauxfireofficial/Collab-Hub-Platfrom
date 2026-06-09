@@ -251,7 +251,7 @@ This project is licensed under the **MIT License** — feel free to use, modify,
 
 <div align="center">
 
-**Built with ❤️ by the Nexus Team**
+**Built with ❤️ by the Faux Fire**
 
 ⭐ *If you found this project useful, please give it a star!* ⭐
 
