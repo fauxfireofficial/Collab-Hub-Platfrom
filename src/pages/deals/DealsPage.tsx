@@ -105,7 +105,11 @@ const AddDealModal: React.FC<AddDealModalProps> = ({ onClose, onAdd }) => {
     });
   }, []);
 
-  const selectedStartup = startupOptions.find(s => s.name === form.startupName);
+  const selectedStartup = startupOptions.find(s => s.name === form.startupName) || {
+    name: form.startupName || 'Unknown Startup',
+    logo: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg',
+    industry: 'Unknown'
+  };
 
   const validate = () => {
     const e: Record<string, string> = {};
@@ -289,7 +293,19 @@ export const DealsPage: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
 
-  const [deals, setDeals] = useState<Deal[]>(initialDeals);
+  const getStoredDeals = (): Deal[] => {
+    const stored = localStorage.getItem('nexus_deals');
+    if (stored) {
+      try {
+        return JSON.parse(stored);
+      } catch (e) {
+        return initialDeals;
+      }
+    }
+    return initialDeals;
+  };
+
+  const [deals, setDeals] = useState<Deal[]>(getStoredDeals);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string[]>([]);
   const [showModal, setShowModal] = useState(false);
@@ -312,7 +328,9 @@ export const DealsPage: React.FC = () => {
   });
 
   const handleAddDeal = (deal: Deal) => {
-    setDeals(prev => [deal, ...prev]);
+    const updatedDeals = [deal, ...deals];
+    setDeals(updatedDeals);
+    localStorage.setItem('nexus_deals', JSON.stringify(updatedDeals));
   };
 
   // Computed stats

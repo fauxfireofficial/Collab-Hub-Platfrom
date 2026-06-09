@@ -23,9 +23,17 @@ export const DealDetailPage: React.FC = () => {
   const [newMessage, setNewMessage] = useState('');
 
   useEffect(() => {
-    // Find deal from mock store
     if (dealId) {
-      const foundDeal = initialDeals.find(d => d.id === parseInt(dealId));
+      let allDeals = initialDeals;
+      const stored = localStorage.getItem('nexus_deals');
+      if (stored) {
+        try {
+          allDeals = JSON.parse(stored);
+        } catch (e) {
+          // ignore
+        }
+      }
+      const foundDeal = allDeals.find((d: Deal) => d.id === parseInt(dealId));
       if (foundDeal) {
         setDeal(foundDeal);
       }
