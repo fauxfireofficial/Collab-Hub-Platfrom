@@ -27,6 +27,24 @@ export const SettingsPage: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'notifications' | 'language' | 'appearance' | 'billing'>('profile');
 
+  // Notification Preferences State
+  const [emailNotifs, setEmailNotifs] = useState(() => localStorage.getItem('nexus_notif_email') !== 'false');
+  const [dmAlerts, setDmAlerts] = useState(() => localStorage.getItem('nexus_notif_dm') !== 'false');
+  const [marketingNews, setMarketingNews] = useState(() => localStorage.getItem('nexus_notif_marketing') === 'true');
+  const [isSavingNotifs, setIsSavingNotifs] = useState(false);
+
+  const handleSaveNotifications = () => {
+    setIsSavingNotifs(true);
+    // Simulate API call
+    setTimeout(() => {
+      localStorage.setItem('nexus_notif_email', String(emailNotifs));
+      localStorage.setItem('nexus_notif_dm', String(dmAlerts));
+      localStorage.setItem('nexus_notif_marketing', String(marketingNews));
+      setIsSavingNotifs(false);
+      toast.success(t('Notification preferences updated successfully!'));
+    }, 800);
+  };
+
   // Password visibility toggles
   const [showCurrentPw, setShowCurrentPw] = useState(false);
   const [showNewPw, setShowNewPw] = useState(false);
@@ -274,7 +292,12 @@ export const SettingsPage: React.FC = () => {
                       <p className="text-xs text-gray-500 dark:text-gray-400">{t('Get updates on new messages, meetings, and deals sent to your email.')}</p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
-                      <input type="checkbox" defaultChecked className="sr-only peer" />
+                      <input 
+                        type="checkbox" 
+                        checked={emailNotifs}
+                        onChange={(e) => setEmailNotifs(e.target.checked)}
+                        className="sr-only peer" 
+                      />
                       <div className="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
                     </label>
                   </div>
@@ -285,7 +308,12 @@ export const SettingsPage: React.FC = () => {
                       <p className="text-xs text-gray-500 dark:text-gray-400">{t('Notify me immediately when I receive a chat message.')}</p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
-                      <input type="checkbox" defaultChecked className="sr-only peer" />
+                      <input 
+                        type="checkbox" 
+                        checked={dmAlerts}
+                        onChange={(e) => setDmAlerts(e.target.checked)}
+                        className="sr-only peer" 
+                      />
                       <div className="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
                     </label>
                   </div>
@@ -296,13 +324,20 @@ export const SettingsPage: React.FC = () => {
                       <p className="text-xs text-gray-500 dark:text-gray-400">{t('Receive weekly newsletters, platform updates, and curated opportunities.')}</p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
-                      <input type="checkbox" className="sr-only peer" />
+                      <input 
+                        type="checkbox" 
+                        checked={marketingNews}
+                        onChange={(e) => setMarketingNews(e.target.checked)}
+                        className="sr-only peer" 
+                      />
                       <div className="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
                     </label>
                   </div>
                 </div>
                 <div className="flex justify-end pt-4 border-t border-gray-100 dark:border-gray-700">
-                  <Button>{t('Save Settings')}</Button>
+                  <Button onClick={handleSaveNotifications} isLoading={isSavingNotifs}>
+                    {t('Save Settings')}
+                  </Button>
                 </div>
               </CardBody>
             </Card>

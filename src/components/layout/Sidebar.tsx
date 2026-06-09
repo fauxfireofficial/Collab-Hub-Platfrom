@@ -44,6 +44,7 @@ export const Sidebar: React.FC = () => {
     { to: '/investors', icon: <CircleDollarSign size={20} />, text: 'Find Investors' },
     { to: '/chat', icon: <MessageCircle size={20} />, text: 'Messages' },
     { to: '/meetings', icon: <Calendar size={20} />, text: 'Meetings & Calendar' },
+    { to: '/deals', icon: <FileText size={20} />, text: 'Deals' },
     { to: '/documents', icon: <FileText size={20} />, text: 'Documents' },
     { to: '/payments', icon: <CircleDollarSign size={20} />, text: 'Wallet & Payments' },
   ];
