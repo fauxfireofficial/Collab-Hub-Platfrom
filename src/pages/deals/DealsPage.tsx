@@ -11,6 +11,8 @@ import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { Avatar } from '../../components/ui/Avatar';
 import { Deal, DealStatus, DealStage } from '../../types';
+import { useAuth } from '../../context/AuthContext';
+import api from '../../services/api';
 
 // ─── Shared deal store (in-memory for this session) ──────────────────────────
 export const initialDeals: Deal[] = [
@@ -113,38 +115,61 @@ const AddDealModal: React.FC<AddDealModalProps> = ({ onClose, onAdd }) => {
 
   const validate = () => {
     const e: Record<string, string> = {};
-    if (!form.startupName) e.startupName = 'Please select a startup.';
     if (!form.amount || isNaN(Number(form.amount))) e.amount = 'Enter a valid number.';
     if (!form.equity || isNaN(Number(form.equity))) e.equity = 'Enter a valid number.';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
-    const newDeal: Deal = {
-      id: Date.now(),
-      startup: selectedStartup!,
-      amount: `$${Number(form.amount).toLocaleString()}`,
-      equity: `${form.equity}%`,
-      status: form.status,
-      stage: form.stage,
-      lastActivity: new Date().toISOString().split('T')[0],
-      notes: '',
-      activities: [
-        {
-          id: `act-${Date.now()}`,
-          date: new Date().toISOString().split('T')[0],
-          type: 'status_change',
-          description: `Deal created at stage: ${form.stage}, Status: ${form.status}`,
-          by: 'You',
-        },
-      ],
-      files: [],
-    };
-    onAdd(newDeal);
-    onClose();
+    
+    // Convert to numbers for backend
+    const amountVal = `$${Number(form.amount).toLocaleString()}`;
+    const equityVal = `${form.equity}%`;
+
+    try {
+      const res = await api.post('/deals', {
+        amount: amountVal,
+        equity: equityVal,
+        stage: form.stage,
+        status: form.status,
+        visibility: 'public',
+        notes: ''
+      });
+      
+      // Backend returns the full deal populated
+      const newDeal = {
+        ...res.data,
+        id: res.data._id,
+        startup: {
+          name: res.data.startup?.name || res.data.startup?.startupName || form.startupName,
+          logo: res.data.startup?.avatarUrl || selectedStartup.logo,
+          industry: res.data.startup?.industry || selectedStartup.industry,
+        }
+      };
+      
+      onAdd(newDeal);
+      onClose();
+    } catch (err) {
+      console.error('Failed to create deal', err);
+      // Fallback local if API fails for some reason
+      const fallbackDeal: Deal = {
+        id: Date.now(),
+        startup: selectedStartup,
+        amount: amountVal,
+        equity: equityVal,
+        status: form.status,
+        stage: form.stage,
+        lastActivity: new Date().toISOString().split('T')[0],
+        notes: '',
+        activities: [],
+        files: [],
+      };
+      onAdd(fallbackDeal);
+      onClose();
+    }
   };
 
   return (
@@ -178,30 +203,6 @@ const AddDealModal: React.FC<AddDealModalProps> = ({ onClose, onAdd }) => {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
-
-          {/* Startup Name Dropdown */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t('Startup Name')} <span className="text-red-500">*</span>
-            </label>
-            <div className="relative">
-              <select
-                value={form.startupName}
-                onChange={e => setForm(f => ({ ...f, startupName: e.target.value }))}
-                className={`w-full rounded-lg border px-3 py-2.5 shadow-sm focus:outline-none focus:ring-2 sm:text-sm bg-white dark:bg-gray-900 dark:text-white transition-colors ${
-                  errors.startupName
-                    ? 'border-red-400 focus:ring-red-500/20'
-                    : 'border-gray-300 dark:border-gray-700 focus:border-primary-500 focus:ring-primary-500/20'
-                }`}
-              >
-                <option value="">{t('— Select a startup —')}</option>
-                {startupOptions.map(s => (
-                  <option key={s.name} value={s.name}>{s.name} ({s.industry})</option>
-                ))}
-              </select>
-            </div>
-            {errors.startupName && <p className="mt-1 text-xs text-red-500">{errors.startupName}</p>}
-          </div>
 
           {/* Amount + Equity */}
           <div className="grid grid-cols-2 gap-4">
@@ -288,27 +289,51 @@ const AddDealModal: React.FC<AddDealModalProps> = ({ onClose, onAdd }) => {
   );
 };
 
-// ─── Main Page ────────────────────────────────────────────────────────────────
 export const DealsPage: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
-  const getStoredDeals = (): Deal[] => {
-    const stored = localStorage.getItem('nexus_deals');
-    if (stored) {
-      try {
-        return JSON.parse(stored);
-      } catch (e) {
-        return initialDeals;
-      }
-    }
-    return initialDeals;
-  };
-
-  const [deals, setDeals] = useState<Deal[]>(getStoredDeals);
+  const [deals, setDeals] = useState<Deal[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string[]>([]);
   const [showModal, setShowModal] = useState(false);
+
+  React.useEffect(() => {
+    const fetchDeals = async () => {
+      try {
+        const res = await api.get('/deals');
+        const mappedDeals = res.data.map((d: any) => ({
+          id: d._id || d.id,
+          startup: {
+            name: d.startup?.name || d.startup?.startupName || 'Unknown Startup',
+            logo: d.startup?.avatarUrl || 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg',
+            industry: d.startup?.industry || 'Technology',
+          },
+          amount: d.amount,
+          equity: d.equity,
+          status: d.status,
+          stage: d.stage,
+          lastActivity: d.lastActivity || d.createdAt,
+          notes: d.notes,
+          activities: d.activities || [],
+          files: d.files || [],
+        }));
+        setDeals(mappedDeals);
+        // Sync to localStorage for Detail page
+        localStorage.setItem('nexus_deals', JSON.stringify(mappedDeals));
+      } catch (err) {
+        console.error('Failed to fetch deals', err);
+        // Fallback to local storage or initial
+        const stored = localStorage.getItem('nexus_deals');
+        setDeals(stored ? JSON.parse(stored) : initialDeals);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchDeals();
+  }, []);
 
   const statusKeys: DealStatus[] = ['Due Diligence', 'Term Sheet', 'Negotiation', 'Closed', 'Passed'];
 
@@ -355,10 +380,12 @@ export const DealsPage: React.FC = () => {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('Investment Deals')}</h1>
           <p className="text-gray-600 dark:text-gray-400">{t('Track and manage your investment pipeline')}</p>
         </div>
-        <Button onClick={() => setShowModal(true)}>
-          <Plus size={16} className="mr-1.5" />
-          {t('Add Deal')}
-        </Button>
+        {user?.role === 'entrepreneur' && (
+          <Button onClick={() => setShowModal(true)}>
+            <Plus size={16} className="mr-1.5" />
+            {t('Add Deal')}
+          </Button>
+        )}
       </div>
 
       {/* Stats */}
