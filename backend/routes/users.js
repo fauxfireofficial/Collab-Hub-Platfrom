@@ -39,18 +39,10 @@ router.get('/entrepreneurs', auth, async (req, res) => {
 // @desc    Get profile by user id
 router.get('/profile/:id', auth, async (req, res) => {
   try {
-    const userId = req.params.id;
-    
-    // Hardcoded check if frontend sends mock IDs
-    if (userId === 'e1' || userId === 'i1' || userId === 'admin') {
-       return res.status(400).json({ message: 'Mock data IDs are not valid in the database' });
-    }
-
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
       return res.status(400).json({ message: 'Invalid User ID format' });
     }
-    
-    const profile = await User.findById(userId);
+    const profile = await User.findById(req.params.id);
     if (!profile) {
       return res.status(404).json({ message: 'Profile not found' });
     }
@@ -70,8 +62,8 @@ router.post('/avatar', auth, uploadAvatar.single('avatar'), async (req, res) => 
     }
 
     // Cloudinary permanent URL
-    const avatarUrl       = req.file.path;
-    const avatarPublicId  = req.file.filename; // public_id for future deletion
+    const avatarUrl = req.file.path;
+    const avatarPublicId = req.file.filename; // public_id for future deletion
 
     // Delete old avatar from Cloudinary (if one exists)
     const existingUser = await User.findById(req.user._id);
@@ -155,10 +147,10 @@ router.post('/connect', auth, async (req, res) => {
     const senderName = req.user.name || 'Someone';
     await createNotification(io, {
       recipientId: recipientId,
-      senderId:    req.user.id,
-      type:        'connection_request',
-      content:     `${senderName} sent you a connection request`,
-      link:        `/profile/${req.user.role}/${req.user.id}`
+      senderId: req.user.id,
+      type: 'connection_request',
+      content: `${senderName} sent you a connection request`,
+      link: `/profile/${req.user.role}/${req.user.id}`
     });
     // ────────────────────────────────────────────────────────────────────────
 
@@ -248,10 +240,10 @@ router.put('/connect/requests/:id', auth, async (req, res) => {
 
       await createNotification(io, {
         recipientId: notifyUserId,
-        senderId:    req.user.id,
-        type:        'connection_accepted',
-        content:     `${acceptorName} accepted your connection request`,
-        link:        `/profile/${req.user.role}/${req.user.id}`
+        senderId: req.user.id,
+        type: 'connection_accepted',
+        content: `${acceptorName} accepted your connection request`,
+        link: `/profile/${req.user.role}/${req.user.id}`
       });
     }
     // ────────────────────────────────────────────────────────────────────────
@@ -302,10 +294,10 @@ router.post('/support/end', auth, async (req, res) => {
       return res.status(403).json({ message: 'Only admins can end a support session' });
     }
     const { userId } = req.body;
-    if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
-      return res.status(400).json({ message: 'Valid User ID is required' });
+    if (!userId) {
+      return res.status(400).json({ message: 'User ID is required' });
     }
-    
+
     // 1. Mark user's session as inactive
     const user = await User.findByIdAndUpdate(
       userId,
@@ -362,7 +354,7 @@ router.get('/support/archives/:userId', auth, async (req, res) => {
     const archives = await SupportArchive.find({ userId: req.params.userId })
       .populate('adminId', 'name email avatarUrl')
       .sort({ closedAt: -1 });
-    
+
     res.json(archives);
   } catch (error) {
     console.error('Get support archives error:', error);
