@@ -1,36 +1,52 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Search, Filter, MapPin } from 'lucide-react';
 import { Input } from '../../components/ui/Input';
 import { Card, CardHeader, CardBody } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { InvestorCard } from '../../components/investor/InvestorCard';
-import { investors } from '../../data/users';
+import api from '../../services/api';
 
 export const InvestorsPage: React.FC = () => {
   const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStages, setSelectedStages] = useState<string[]>([]);
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
+  const [investorsList, setInvestorsList] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchInvestors = async () => {
+      try {
+        const response = await api.get('/users/investors');
+        setInvestorsList(response.data);
+      } catch (error) {
+        console.error('Failed to fetch investors:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchInvestors();
+  }, []);
   
   // Get unique investment stages and interests
-  const allStages = Array.from(new Set(investors.flatMap(i => i.investmentStage)));
-  const allInterests = Array.from(new Set(investors.flatMap(i => i.investmentInterests)));
+  const allStages = Array.from(new Set(investorsList.flatMap(i => i.investmentStage || [])));
+  const allInterests = Array.from(new Set(investorsList.flatMap(i => i.investmentInterests || [])));
   
   // Filter investors based on search and filters
-  const filteredInvestors = investors.filter(investor => {
+  const filteredInvestors = investorsList.filter(investor => {
     const matchesSearch = searchQuery === '' || 
       investor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      investor.bio.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      investor.investmentInterests.some(interest => 
+      (investor.bio && investor.bio.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (investor.investmentInterests && investor.investmentInterests.some((interest: string) => 
         interest.toLowerCase().includes(searchQuery.toLowerCase())
-      );
+      ));
     
     const matchesStages = selectedStages.length === 0 ||
-      investor.investmentStage.some(stage => selectedStages.includes(stage));
+      (investor.investmentStage && investor.investmentStage.some((stage: string) => selectedStages.includes(stage)));
     
     const matchesInterests = selectedInterests.length === 0 ||
-      investor.investmentInterests.some(interest => selectedInterests.includes(interest));
+      (investor.investmentInterests && investor.investmentInterests.some((interest: string) => selectedInterests.includes(interest)));
     
     return matchesSearch && matchesStages && matchesInterests;
   });
@@ -141,14 +157,38 @@ export const InvestorsPage: React.FC = () => {
             </div>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {filteredInvestors.map(investor => (
-              <InvestorCard
-                key={investor.id}
-                investor={investor}
-              />
-            ))}
-          </div>
+          {isLoading ? (
+            <div className="flex justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {filteredInvestors.length === 0 ? (
+                <div className="col-span-2 text-center py-8 text-gray-500">
+                  {t('No investors found matching your criteria.')}
+                </div>
+              ) : (
+                filteredInvestors.map(investor => (
+                  <InvestorCard
+                    key={investor._id || investor.id}
+                    investor={{
+                      id: investor._id || investor.id,
+                      name: investor.name,
+                      email: investor.email,
+                      avatarUrl: investor.avatarUrl,
+                      role: investor.role,
+                      bio: investor.bio || 'No bio available',
+                      isVerified: investor.isVerified,
+                      investmentStage: investor.investmentStage || [],
+                      investmentInterests: investor.investmentInterests || [],
+                      minInvestment: investor.minInvestment,
+                      maxInvestment: investor.maxInvestment
+                    }}
+                  />
+                ))
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

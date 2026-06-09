@@ -53,15 +53,7 @@ export const initialDeals: Deal[] = [
   },
 ];
 
-// Startup dropdown options (simulates fetching from backend)
-const startupOptions = [
-  { name: 'TechWave AI', logo: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg', industry: 'FinTech' },
-  { name: 'GreenLife Solutions', logo: 'https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg', industry: 'CleanTech' },
-  { name: 'HealthPulse', logo: 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg', industry: 'HealthTech' },
-  { name: 'NovaDrive', logo: 'https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg', industry: 'Automotive' },
-  { name: 'FinEdge', logo: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg', industry: 'FinTech' },
-  { name: 'AgroSmart', logo: 'https://images.pexels.com/photos/712513/pexels-photo-712513.jpeg', industry: 'AgriTech' },
-];
+// Startup options will be fetched dynamically
 
 const STAGES: DealStage[] = ['Pre-seed', 'Seed', 'Series A', 'Series B', 'Series C', 'Growth'];
 const STATUSES: DealStatus[] = ['Due Diligence', 'Term Sheet', 'Negotiation', 'Closed', 'Passed'];
@@ -94,6 +86,24 @@ const AddDealModal: React.FC<AddDealModalProps> = ({ onClose, onAdd }) => {
     status: 'Due Diligence' as DealStatus,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [startupOptions, setStartupOptions] = useState<any[]>([]);
+
+  React.useEffect(() => {
+    // We import api at the top of the file
+    import('../../services/api').then(({ default: api }) => {
+      api.get('/users/entrepreneurs')
+        .then(res => {
+          // Map backend entrepreneurs to the format AddDealModal expects
+          const options = res.data.map((u: any) => ({
+            name: u.startupName || u.name,
+            logo: u.avatarUrl || 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg',
+            industry: u.industry || 'Technology',
+          }));
+          setStartupOptions(options);
+        })
+        .catch(err => console.error('Failed to load startups', err));
+    });
+  }, []);
 
   const selectedStartup = startupOptions.find(s => s.name === form.startupName);
 
